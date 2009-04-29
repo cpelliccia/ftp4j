@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="rel">
+<project name="ftp4j" default="rel">
 
     <condition property="revision" value="${svn.info.rev}" else="UNKNOWN">
         <isset property="svn.info.rev" />
