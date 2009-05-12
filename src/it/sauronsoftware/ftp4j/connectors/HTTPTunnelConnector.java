@@ -18,7 +18,6 @@
  */
 package it.sauronsoftware.ftp4j.connectors;
 
-import it.sauronsoftware.ftp4j.FTPConnection;
 import it.sauronsoftware.ftp4j.FTPConnector;
 
 import java.io.BufferedReader;
@@ -89,7 +88,7 @@ public class HTTPTunnelConnector implements FTPConnector {
 		this(proxyHost, proxyPort, null, null);
 	}
 
-	private FTPConnection connect(String host, int port) throws IOException {
+	private Socket connect(String host, int port) throws IOException {
 		// The CRLF sequence.
 		byte[] CRLF = "\r\n".getBytes("UTF-8");
 		// The connect command line.
@@ -176,15 +175,15 @@ public class HTTPTunnelConnector implements FTPConnector {
 				}
 			}
 		}
-		return new SocketConnection(socket, in, out);
+		return socket;
 	}
 
-	public FTPConnection connectForCommunicationChannel(String host, int port)
+	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
 		return connect(host, port);
 	}
 
-	public FTPConnection connectForDataTransferChannel(String host, int port)
+	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
 		return connect(host, port);
 	}

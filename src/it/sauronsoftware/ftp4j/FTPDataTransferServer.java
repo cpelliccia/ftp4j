@@ -19,8 +19,6 @@
 package it.sauronsoftware.ftp4j;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -63,8 +61,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 	 */
 	public FTPDataTransferServer() throws FTPDataTransferException {
 		boolean useRange = false;
-		String aux = System
-				.getProperty(FTPKeys.ACTIVE_DT_PORT_RANGE);
+		String aux = System.getProperty(FTPKeys.ACTIVE_DT_PORT_RANGE);
 		int start = 0;
 		int stop = 0;
 		if (aux != null) {
@@ -95,8 +92,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 			if (!valid) {
 				// warning to the developer
 				System.err.println("WARNING: invalid value \"" + aux
-						+ "\" for the "
-						+ FTPKeys.ACTIVE_DT_PORT_RANGE
+						+ "\" for the " + FTPKeys.ACTIVE_DT_PORT_RANGE
 						+ " system property. The value should "
 						+ "be in the start-stop form, with "
 						+ "start > 0, stop > 0 and start <= stop.");
@@ -150,8 +146,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 
 	public void run() {
 		int timeout = 30000;
-		String aux = System
-				.getProperty(FTPKeys.ACTIVE_DT_ACCEPT_TIMEOUT);
+		String aux = System.getProperty(FTPKeys.ACTIVE_DT_ACCEPT_TIMEOUT);
 		if (aux != null) {
 			boolean valid = false;
 			int value;
@@ -167,8 +162,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 			if (!valid) {
 				// warning to the developer
 				System.err.println("WARNING: invalid value \"" + aux
-						+ "\" for the "
-						+ FTPKeys.ACTIVE_DT_ACCEPT_TIMEOUT
+						+ "\" for the " + FTPKeys.ACTIVE_DT_ACCEPT_TIMEOUT
 						+ " system property. The value should "
 						+ "be an integer greater or equal to 0.");
 			}
@@ -204,8 +198,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 		}
 	}
 
-	public FTPConnection openDataTransferConnection()
-			throws FTPDataTransferException {
+	public Socket openDataTransferConnection() throws FTPDataTransferException {
 		if (socket == null && exception == null) {
 			try {
 				thread.join();
@@ -220,29 +213,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 		if (socket == null) {
 			throw new FTPDataTransferException("No socket available");
 		}
-		return new ServerConnection(socket);
-	}
-
-	private static class ServerConnection implements FTPConnection {
-
-		private Socket socket;
-
-		public ServerConnection(Socket socket) {
-			this.socket = socket;
-		}
-
-		public void close() throws IOException {
-			socket.close();
-		}
-
-		public InputStream getInputStream() throws IOException {
-			return socket.getInputStream();
-		}
-
-		public OutputStream getOutputStream() throws IOException {
-			return socket.getOutputStream();
-		}
-
+		return socket;
 	}
 
 }

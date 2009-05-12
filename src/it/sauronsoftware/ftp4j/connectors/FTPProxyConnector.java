@@ -19,7 +19,6 @@
 package it.sauronsoftware.ftp4j.connectors;
 
 import it.sauronsoftware.ftp4j.FTPCommunicationChannel;
-import it.sauronsoftware.ftp4j.FTPConnection;
 import it.sauronsoftware.ftp4j.FTPConnector;
 import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
 import it.sauronsoftware.ftp4j.FTPReply;
@@ -131,12 +130,11 @@ public class FTPProxyConnector implements FTPConnector {
 		this.style = style;
 	}
 
-	public FTPConnection connectForCommunicationChannel(String host, int port)
+	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
 		Socket socket = new Socket(proxyHost, proxyPort);
-		SocketConnection socketConnection = new SocketConnection(socket);
 		FTPCommunicationChannel communication = new FTPCommunicationChannel(
-				socketConnection, "ASCII");
+				socket, "ASCII");
 		// Welcome message.
 		FTPReply r;
 		try {
@@ -190,13 +188,12 @@ public class FTPProxyConnector implements FTPConnector {
 		} else if (style == STYLE_OPEN_COMMAND) {
 			communication.sendFTPCommand("OPEN " + host + ":" + port);
 		}
-		return socketConnection;
+		return socket;
 	}
 
-	public FTPConnection connectForDataTransferChannel(String host, int port)
+	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
-		Socket socket = new Socket(host, port);
-		return new SocketConnection(socket);
+		return new Socket(host, port);
 	}
 
 }

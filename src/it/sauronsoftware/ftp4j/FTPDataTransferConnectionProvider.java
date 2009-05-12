@@ -18,6 +18,8 @@
  */
 package it.sauronsoftware.ftp4j;
 
+import java.net.Socket;
+
 /**
  * A package reserved {@link FTPConnection} provider, used internally by the
  * client to obtain connections for data transfer purposes.
@@ -34,8 +36,7 @@ interface FTPDataTransferConnectionProvider {
 	 * @throws FTPException
 	 *             If an unexpected error occurs.
 	 */
-	public FTPConnection openDataTransferConnection()
-			throws FTPDataTransferException;
+	public Socket openDataTransferConnection() throws FTPDataTransferException;
 
 	/**
 	 * Terminates the provider.

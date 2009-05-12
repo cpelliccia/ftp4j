@@ -18,7 +18,6 @@
  */
 package it.sauronsoftware.ftp4j.connectors;
 
-import it.sauronsoftware.ftp4j.FTPConnection;
 import it.sauronsoftware.ftp4j.FTPConnector;
 
 import java.io.IOException;
@@ -86,7 +85,7 @@ public class SOCKS5Connector implements FTPConnector {
 		this(socks5host, socks5port, null, null);
 	}
 
-	private FTPConnection connect(String host, int port) throws IOException {
+	private Socket connect(String host, int port) throws IOException {
 		// Authentication flag
 		boolean authentication = socks5user != null && socks5pass != null;
 		// A connection status flag.
@@ -265,7 +264,7 @@ public class SOCKS5Connector implements FTPConnector {
 				}
 			}
 		}
-		return new SocketConnection(socket, in, out);
+		return socket;
 	}
 
 	private int read(InputStream in) throws IOException {
@@ -277,12 +276,12 @@ public class SOCKS5Connector implements FTPConnector {
 		return aux;
 	}
 
-	public FTPConnection connectForCommunicationChannel(String host, int port)
+	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
 		return connect(host, port);
 	}
 
-	public FTPConnection connectForDataTransferChannel(String host, int port)
+	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
 		return connect(host, port);
 	}

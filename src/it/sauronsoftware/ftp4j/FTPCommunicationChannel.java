@@ -21,6 +21,7 @@ package it.sauronsoftware.ftp4j;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -40,7 +41,7 @@ public class FTPCommunicationChannel {
 	/**
 	 * The connection.
 	 */
-	private FTPConnection connection = null;
+	private Socket connection = null;
 
 	/**
 	 * The stream-reader channel established with the remote server.
@@ -63,7 +64,7 @@ public class FTPCommunicationChannel {
 	 * @throws IOException
 	 *             If a I/O error occurs.
 	 */
-	public FTPCommunicationChannel(FTPConnection connection, String charsetName)
+	public FTPCommunicationChannel(Socket connection, String charsetName)
 			throws IOException {
 		this.connection = connection;
 		InputStream inStream = connection.getInputStream();

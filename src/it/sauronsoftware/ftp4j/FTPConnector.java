@@ -19,6 +19,7 @@
 package it.sauronsoftware.ftp4j;
 
 import java.io.IOException;
+import java.net.Socket;
 
 /**
  * This interface describes a connector. Connectors are used by the client to
@@ -40,7 +41,7 @@ public interface FTPConnector {
 	 * @throws IOException
 	 *             If the connection cannot be established.
 	 */
-	public FTPConnection connectForCommunicationChannel(String host, int port)
+	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException;
 
 	/**
@@ -55,7 +56,7 @@ public interface FTPConnector {
 	 * @throws IOException
 	 *             If the connection cannot be established.
 	 */
-	public FTPConnection connectForDataTransferChannel(String host, int port)
+	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException;
-
+	
 }

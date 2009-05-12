@@ -38,6 +38,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -47,6 +48,8 @@ import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * This class implements a FTP client.
@@ -64,9 +67,30 @@ import java.util.regex.Pattern;
  * server.
  * 
  * @author Carlo Pelliccia
- * @version 1.3
+ * @version 1.4
  */
 public class FTPClient {
+
+	/**
+	 * The constant for the FTP security level.
+	 * 
+	 * @since 1.4
+	 */
+	public static final int SECURITY_FTP = 0;
+
+	/**
+	 * The constant for the FTPS (FTP over implicit TSL/SSL) security level.
+	 * 
+	 * @since 1.4
+	 */
+	public static final int SECURITY_FTPS = 1;
+
+	/**
+	 * The constant for the FTPSS (FTP over explicit TSL/SSL) security level.
+	 * 
+	 * @since 1.4
+	 */
+	public static final int SECURITY_FTPES = 2;
 
 	/**
 	 * The constant for the AUTO file transfer type. It lets the client pick
@@ -112,6 +136,12 @@ public class FTPClient {
 	private FTPConnector connector = new DirectConnector();
 
 	/**
+	 * The SSL socket factory used to negotiate SSL connections.
+	 */
+	private SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory
+			.getDefault();
+
+	/**
 	 * The FTPCommunicationListener objects registered on the client.
 	 */
 	private ArrayList communicationListeners = new ArrayList();
@@ -142,6 +172,13 @@ public class FTPClient {
 	 * If the client is connected, it reports the remote port number.
 	 */
 	private int port = 0;
+
+	/**
+	 * The security level. The value should be one of SECURITY_FTP,
+	 * SECURITY_FTPS and SECURITY_FTPES constants. Default value is
+	 * SECURITY_FTP.
+	 */
+	private int security = SECURITY_FTP;
 
 	/**
 	 * If the client is authenticated, it reports the authentication username.
@@ -245,7 +282,9 @@ public class FTPClient {
 	 * @return The connector used to connect the remote host.
 	 */
 	public FTPConnector getConnector() {
-		return connector;
+		synchronized (lock) {
+			return connector;
+		}
 	}
 
 	/**
@@ -259,8 +298,86 @@ public class FTPClient {
 	 * @see DirectConnector
 	 */
 	public void setConnector(FTPConnector connector) {
-		this.connector = connector;
+		synchronized (lock) {
+			this.connector = connector;
+		}
 	}
+
+	/******** NEW FIELDS *************************************************************************/
+
+	/**
+	 * Sets the SSL socket factory used to negotiate SSL connections.
+	 * 
+	 * @param sslSocketFactory
+	 *            The SSL socket factory used to negotiate SSL connections.
+	 * 
+	 * @since 1.4
+	 */
+	public void setSSLSocketFactory(SSLSocketFactory sslSocketFactory) {
+		synchronized (lock) {
+			this.sslSocketFactory = sslSocketFactory;
+		}
+	}
+
+	/**
+	 * Returns the SSL socket factory used to negotiate SSL connections.
+	 * 
+	 * @return The SSL socket factory used to negotiate SSL connections.
+	 * 
+	 * @since 1.4
+	 */
+	public SSLSocketFactory getSSLSocketFactory() {
+		synchronized (lock) {
+			return sslSocketFactory;
+		}
+	}
+
+	/**
+	 * Sets the security level for the connection. This method should be called
+	 * before starting a connection with a server. The security level must be
+	 * expressed using one of the SECURITY_FTP, SECURITY_FTPS and SECURITY_FTPES
+	 * costants.
+	 * 
+	 * SECURITY_FTP, which is the default value, applies the basic FTP security
+	 * level.
+	 * 
+	 * SECURITY_FTPS applies the FTPS security level, which is FTP over implicit
+	 * TSL/SSL.
+	 * 
+	 * SECURITY_FTPES applies the FTPES security level, which is FTP over
+	 * explicit TSL/SSL.
+	 * 
+	 * @param security
+	 *            The security level.
+	 * @throws IllegalArgumentException
+	 *             If the supplied security level is not valid.
+	 * 
+	 * @since 1.4
+	 */
+	public void setSecurity(int security) throws IllegalArgumentException {
+		if (security != SECURITY_FTP && security != SECURITY_FTPS
+				&& security != SECURITY_FTPES) {
+			throw new IllegalArgumentException("Invalid security");
+		}
+		synchronized (lock) {
+			this.security = security;
+			// TODO security def values
+		}
+	}
+
+	/**
+	 * Returns the security level used by the client in the connection.
+	 * 
+	 * @return The security level, which could be one of the SECURITY_FTP,
+	 *         SECURITY_FTPS and SECURITY_FTPES costants.
+	 * 
+	 * @since 1.4
+	 */
+	public int getSecurity() {
+		return security;
+	}
+
+	/*********************************************************************************************/
 
 	/**
 	 * This method enables/disables the use of the passive mode.
@@ -613,7 +730,7 @@ public class FTPClient {
 						+ host + " on port " + port);
 			}
 			// Ok, it's connection time. Let's try!
-			FTPConnection connection = null;
+			Socket connection = null;
 			try {
 				// Open the connection.
 				connection = connector.connectForCommunicationChannel(host,
@@ -1562,7 +1679,7 @@ public class FTPClient {
 				command += " " + fileSpec;
 			}
 			communication.sendFTPCommand(command);
-			FTPConnection dtConnection;
+			Socket dtConnection;
 			try {
 				dtConnection = provider.openDataTransferConnection();
 				r = communication.readFTPReply();
@@ -1774,7 +1891,7 @@ public class FTPClient {
 			}
 			// Send the NLST command.
 			communication.sendFTPCommand("NLST");
-			FTPConnection dtConnection;
+			Socket dtConnection;
 			try {
 				dtConnection = provider.openDataTransferConnection();
 				r = communication.readFTPReply();
@@ -2118,7 +2235,7 @@ public class FTPClient {
 			}
 			// Send the STOR command.
 			communication.sendFTPCommand("STOR " + fileName);
-			FTPConnection dtConnection;
+			Socket dtConnection;
 			try {
 				dtConnection = provider.openDataTransferConnection();
 				r = communication.readFTPReply();
@@ -2509,7 +2626,7 @@ public class FTPClient {
 			}
 			// Send the RETR command.
 			communication.sendFTPCommand("RETR " + fileName);
-			FTPConnection dtConnection;
+			Socket dtConnection;
 			try {
 				dtConnection = provider.openDataTransferConnection();
 				r = communication.readFTPReply();
@@ -2655,7 +2772,7 @@ public class FTPClient {
 			server.dispose();
 			// Closes the already open connection (if any).
 			try {
-				FTPConnection aux = server.openDataTransferConnection();
+				Socket aux = server.openDataTransferConnection();
 				aux.close();
 			} catch (Throwable t) {
 				;
@@ -2709,10 +2826,10 @@ public class FTPClient {
 		final int remotePort = (p1 << 8) | p2;
 		FTPDataTransferConnectionProvider provider = new FTPDataTransferConnectionProvider() {
 
-			public FTPConnection openDataTransferConnection()
+			public Socket openDataTransferConnection()
 					throws FTPDataTransferException {
 				// Establish the connection.
-				FTPConnection dtConnection;
+				Socket dtConnection;
 				try {
 					dtConnection = connector.connectForDataTransferChannel(
 							remoteAddress.getHostAddress(), remotePort);
@@ -2895,23 +3012,37 @@ public class FTPClient {
 					buffer2.append('*');
 				}
 				buffer.append(buffer2);
+				buffer.append(", utf8supported=");
+				buffer.append(utf8Supported);
 			}
+			buffer.append(", security=");
+			switch (security) {
+			case SECURITY_FTP:
+				buffer.append("SECURITY_FTP");
+				break;
+			case SECURITY_FTPS:
+				buffer.append("SECURITY_FTPS");
+				break;
+			case SECURITY_FTPES:
+				buffer.append("SECURITY_FTPES");
+				break;
+			}
+			buffer.append(", connector=");
+			buffer.append(connector);
 			buffer.append(", transfer mode=");
 			buffer.append(passive ? "passive" : "active");
 			buffer.append(", transfer type=");
 			switch (type) {
 			case TYPE_AUTO:
-				buffer.append("auto");
+				buffer.append("TYPE_AUTO");
 				break;
 			case TYPE_BINARY:
-				buffer.append("binary");
+				buffer.append("TYPE_BINARY");
 				break;
 			case TYPE_TEXTUAL:
-				buffer.append("textual");
+				buffer.append("TYPE_TEXTUAL");
 				break;
 			}
-			buffer.append(", connector=");
-			buffer.append(connector);
 			buffer.append(", textualExtensionRecognizer=");
 			buffer.append(textualExtensionRecognizer);
 			FTPListParser[] listParsers = getListParsers();
