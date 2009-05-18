@@ -1,30 +1,31 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>Manuale di ftp4j 1.3</title>
+<title>Manuale di ftp4j 1.4</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 </head>
 <body>
-<h1>Manuale di ftp4j 1.3</h1>
+<h1>Manuale di ftp4j 1.4</h1>
 <ul>
   <li><a href="#1">Requisiti</a></li>
   <li><a href="#2">Installazione</a></li>
   <li><a href="#3">Javadoc</a></li>
   <li><a href="#4">Per cominciare</a></li>
   <li><a href="#5">Connessione attraverso un proxy</a></li>
-  <li><a href="#6">Navigare nel sito remoto</a></li>
-  <li><a href="#7">Rinominare i file e le directory</a></li>
-  <li><a href="#8">Spostare i file e le directory </a></li>
-  <li><a href="#9">Cancellare i file</a></li>
-  <li><a href="#10">Creare e cancellare le directory</a></li>
-  <li><a href="#11">Elencare i file, le directory ed i collegamenti</a></li>
-  <li><a href="#12">Data di modifica di file, directory e collegamenti</a></li>
-  <li><a href="#13">Download e upload dei file</a></li>
-  <li><a href="#14">Trasferimenti attivi e passivi</a></li>
-  <li><a href="#15">Trasferimenti binari e testuali</a></li>
-  <li><a href="#16">Il comando NOOP</a></li>
-  <li><a href="#15">Comandi del sito e personalizzati</a></li>
-  <li><a href="#18">Gestione delle eccezioni</a></li>
+  <li><a href="#6">Connessione sicura FTPS/FTPES</a></li>
+  <li><a href="#7">Navigare nel sito remoto</a></li>
+  <li><a href="#8">Rinominare i file e le directory</a></li>
+  <li><a href="#9">Spostare i file e le directory </a></li>
+  <li><a href="#10">Cancellare i file</a></li>
+  <li><a href="#11">Creare e cancellare le directory</a></li>
+  <li><a href="#12">Elencare i file, le directory ed i collegamenti</a></li>
+  <li><a href="#13">Data di modifica di file, directory e collegamenti</a></li>
+  <li><a href="#14">Download e upload dei file</a></li>
+  <li><a href="#15">Trasferimenti attivi e passivi</a></li>
+  <li><a href="#16">Trasferimenti binari e testuali</a></li>
+  <li><a href="#17">Il comando NOOP</a></li>
+  <li><a href="#18">Comandi del sito e personalizzati</a></li>
+  <li><a href="#19">Gestione delle eccezioni</a></li>
 </ul>
 <a name="1"></a>
 <h2>Requisiti</h2>
@@ -71,13 +72,53 @@ Questo connettore si collega attraverso un proxy FTP in grado di supportare il c
   <li><em>SOCKS5Connector</em> (<em>it.sauronsoftware.ftp4j.connectors.SOCKS5Connector</em>)<br />
   Questo connettore si collega alla destinazione attraverso un proxy SOCKS 5.</li>
 </ul>
-<p>Un altro connettore fornito &egrave;:</p>
-<ul>
-  <li><em>SSLConnector</em> (<em>it.sauronsoftware.ftp4j.connectors.SSLConnector</em>)<br />
-    Questo connettore si collega attraverso un canale sicuro SSL (FTPS).</li>
-</ul>
 <p>Poich&eacute; l'architettura di ftp4j &egrave; modulare, altri connettori possono essere sviluppati da chiunque, implementando l'interfaccia <em>FTPConnector</em>.</p>
 <a name="6"></a>
+<h2>Connessione sicura FTPS/FTPES</h2>
+<p>La libreria ftp4j supporta le due varianti sicure di FTP denominate FTPS (FTP con TLS/SSL implicito) e FTPES (FTP su TLS/SSL esplicito).</p>
+<p>Il metodo <em>setSecurity()</em> pu&ograve; essere utilizzato per attivare la funzionalit&agrave;:</p>
+<pre>client.setSecurity(FTPClient.SECURITY_FTPS); // attiva FTPS</pre>
+<pre>client.setSecurity(FTPClient.SECURITY_FTPES); // attiva FTPES</pre>
+<p>Ambo i metodi devono essere invocati prima di connettere il client al server.</p>
+<p>Se il livello di sicurezza &egrave; impostato su <em>SECURITY_FTPS</em>, la porta di default usata dal metodo <em>connect()</em> diventa 990.</p>
+<p>Il client negozia le connessioni SSL usando la socket factory restituita dalla chiamata Java    <em>javax.net.ssl.SSLSocketFactory.getDefault()</em>. La socket factory pu&ograve; essere cambiata invocando il metodo del client <em>setSSLSocketFactory()</em>. Una <em>SSLSocketFactory</em> alternativa, per esempio, pu&ograve; essere usata per fidarsi di qualunque certificato inviato dalla parte remota, anche se non riconosciuto o scaduto (da usare con cautela):</p>
+<pre>import it.sauronsoftware.ftp4j.FTPClient;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+// ...
+
+TrustManager[] trustManager = new TrustManager[] { new X509TrustManager() {
+	public X509Certificate[] getAcceptedIssuers() {
+		return null;
+	}
+	public void checkClientTrusted(X509Certificate[] certs, String authType) {
+	}
+	public void checkServerTrusted(X509Certificate[] certs, String authType) {
+	}
+} };
+SSLContext sslContext = null;
+try {
+	sslContext = SSLContext.getInstance("SSL");
+	sslContext.init(null, trustManager, new SecureRandom());
+} catch (NoSuchAlgorithmException e) {
+	e.printStackTrace();
+} catch (KeyManagementException e) {
+	e.printStackTrace();
+}
+SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+FTPClient client = new FTPClient();
+client.setSSLSocketFactory(sslSocketFactory);
+client.setSecurity(FTPClient.SECURITY_FTPS); // o client.setSecurity(FTPClient.SECURITY_FTPES);
+
+// ...</pre>
+<a name="7"></a>
 <h2>Navigare nel sito  remoto</h2>
 <p>Per recuperare il percorso della directory di lavoro corrente:</p>
 <pre>String dir = client.currentDirectory();</pre>
@@ -88,22 +129,22 @@ Questo connettore si collega attraverso un proxy FTP in grado di supportare il c
 client.changeDirectory(&quot;relative&quot;);</pre>
 <p>Per spostarsi nella directory superiore, cio&egrave; quella che contiene la directory di lavoro corrente:</p>
 <pre>client.changeDirectoryUp();</pre>
-<a name="7"></a>
+<a name="8"></a>
 <h2>Rinominare i file e le directory</h2>
 <p>Per rinominare un file o una directory:</p>
 <pre>client.rename(&quot;oldname&quot;, &quot;newname&quot;);</pre>
-<a name="8"></a>
+<a name="9"></a>
 <h2>Spostare i file e le directory:</h2>
 <p>Il metodo <em>rename()</em> pu&ograve; essere usato anche per spostare i file e le directory da una posizione ad un'altra.</p>
 <p>Si immagini  di avere nella directory di lavoro corrente un file chiamato &quot;myfile.txt&quot;, che deve essere spostato nella sotto-directory &quot;myfolder&quot;:</p>
 <pre>client.rename(&quot;myfile.txt&quot;, &quot;myfolder/myfile.txt&quot;);</pre>
-<a name="9"></a>
+<a name="10"></a>
 <h2>Cancellare i file</h2>
 <p>Per cancellare un file remoto:</p>
 <pre>client.deleteFile(relativeOrAbsolutePath);</pre>
 <p>Ad esempio:</p>
 <pre>client.deleteFile(&quot;useless.txt&quot;);</pre>
-<a name="10"></a>
+<a name="11"></a>
 <h2>Creare e cancellare le directory</h2>
 <p>Per creare una nuova directory nel sito remoto, ammesso che i diritti di accesso lo consentano:</p>
 <pre>client.createDirectory(&quot;newfolder&quot;);</pre>
@@ -112,7 +153,7 @@ client.changeDirectory(&quot;relative&quot;);</pre>
 <p>Ad esempio:</p>
 <pre>client.deleteDirectory(&quot;oldfolder&quot;);</pre>
 <p>Si faccia attenzione al fatto che, generalmente, i servizi FTP si rifiutano di cancellare le directory non vuote.</p>
-<a name="11"></a>
+<a name="12"></a>
 <h2>Elencare i file, le directory ed i collegamenti</h2>
 <p>Il protocollo FTP non specifica alcun metodo ampiamente supportato per elencare i dettagli del contenuto di una directory. La cosa che ci va pi&ugrave; vicina &egrave; il comando LIST, ma che purtroppo lascia al server libera scelta sul formato della risposta. Cos&igrave; accade che alcuni server rispondono con un output che ricorda quello del comando <em>ls</em> di UNIX, altri come il <em>dir</em> di DOS, altri ancora con formati alternativi ai due.</p>
 <p>La libreria ftp4j pu&ograve; riconoscere diversi formati. Una volta interpretata la risposta in base al formato riconosciuto, al programmatore viene restituita una rappresentazione ad oggetti di quanto elaborato. Attualmente ftp4j pu&ograve; riconoscere ed interpretare gli stili del tipo:</p>
@@ -129,11 +170,11 @@ client.changeDirectory(&quot;relative&quot;);</pre>
 <p>Gli oggetti <em>FTPFile</em> (<em>it.sauronsoftware.ftp4j.FTPFile</em>) mantengono una rappresentazione dei contenuti della directory di lavoro, e sono usati per rappresentare i file, le sotto-directory ed i collegamenti. In base al tipo di risposta dato dal server alcune informazioni di un oggetto <em>FTPFile</em> possono essere assenti o impostate su valori di poco senso. Si faccia riferimento ai javadoc della libreria per maggiori dettagli.</p>
 <p>E' possibile filtrare i risultati restituiti dal metodo <em>list()</em>, come nel seguente esempio:</p>
 <pre>FTPFile[] list = client.list(&quot;*.jpg&quot;);</pre>
-<a name="12"></a>
+<a name="13"></a>
 <h2>Data di modifica di file, directory e collegamenti</h2>
 <p>Normalmente un oggetto <em>FTPFile</em> riporta la data di modifica dell'entit&agrave; rappresentata, ma come si &egrave; appena detto il dettaglio e la completezza della risposta dipendono dalla tipologia del server remoto. Quando l'informazione manca si pu&ograve; provare a recuperarla in questo modo:</p>
 <pre>java.util.Date md = client.modifiedDate(&quot;filename.ext&quot;);</pre>
-<a name="13"></a>
+<a name="14"></a>
 <h2>Download ed upload dei file</h2>
 <p>La maniera pi&ugrave; semplice per scaricare un file &egrave; chiamare il metodo <em>download(String, 
   File)</em>:</p>
@@ -180,7 +221,7 @@ public class MyTransferListener implements FTPDataTransferListener {
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;), 1056);</pre>
 <p>Questo esempio riprende l'operazione a partire dal byte 1056 del file. Il primo byte trasferito sar&agrave; il numero 1057.</p>
 <p>Altre varianti di <em>download()</em> ed <em>upload()</em> lavorano con gli stream invece che con gli oggetti <em>java.io.File</em>. In questa maniera &egrave; possibile scambiare i dati non solo con il file system, ma anche con un database, una connessione di rete o... un altro oggetto <em>FTPClient</em>!</p>
-<a name="14"></a>
+<a name="15"></a>
 <h2>Trasferimenti attivi e passivi</h2>
 <p>I canali di trasferimento sono stabiliti su una separata connessione di rete tra il client ed il server. Chi contatta l'altro? La risposta dipende dal modo adottato. Il server pu&ograve; essere <em>attivo</em> o <em>passivo</em>. Quando &egrave; attivo il server si connette al client per trasferire dei dati; quando &egrave; passivo &egrave; il client a dover stabilire la connessione.</p>
 <p>Il trasferimento attivo pu&ograve; essere utilizzato solo se il client &egrave; in grado di ricevere connessioni da parte del server. Se il client &egrave; dietro un firewall, un proxy, un gateway o un misto di questi &egrave; molto poco probabile che il server possa raggiungerlo per stabilire una connessione. Perci&ograve; di solito si preferisce chiedere al server di operare in maniera passiva, in modo che sia sempre e solo il client a svolgere le connessioni attraverso il proprio connettore.</p>
@@ -210,7 +251,7 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.portRange&quot;, &quot;6000-70
 System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;5000&quot;);</pre>
   </li>
 </ul>
-<a name="15"></a>
+<a name="16"></a>
 <h2>Trasferimenti binari e testuali</h2>
 <p>Un altro concetto legato ai trasferimenti riguarda i tipi <em>binari</em> e <em>testuali</em>. Quando un trasferimento &egrave; binario il file viene trattato da ambo le parti come una sequenza binaria, cio&egrave; un flusso di byte, e viene registrato da chi lo riceve cos&igrave; come gli &egrave; arrivato, senza analisi o manipolazioni dei dati ricevuti. Quando un trasferimento &egrave; testuale, al contrario, ambo le parti possono applicare delle trasformazioni di charset. Si immagini di avere un client in esecuzione su una piattaforma Windows, mentre il server gira su un sistema UNIX. Normalmente i charset usati dalle due piattaforme sono diversi. Il client deve inviare al sito remoto un file dai contenuti testuali. Scegliendo il trasferimento testuale il client legger&agrave; il file supponendo che i suoi contenuti siano stati codificati secondo il charset predefinito della macchina che lo esegue. Il contenuto del file sar&agrave; decodificato e ricodificato in una codifica intermedia. Il server ricever&agrave;  i dati nella codifica intermedia, e sar&agrave; suo compito riconvertirli secondo il charset predefinito della propria macchina. Se i charset di partenza e di destinazione sono differenti la sequenza di byte che compone il file trasferito sar&agrave; molto probabilmente cambiata, ma il contenuto rimarr&agrave; lo stesso e la leggibilit&agrave; mantenuta.</p>
 <p>Per scegliere il tipo del trasferimento con ftp4j:</p>
@@ -221,19 +262,19 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <pre>abc acgi aip asm asp c c cc cc com conf cpp<br />csh css cxx def el etx f f f77 f90 f90 flx<br />for for g h h hh hh hlb htc htm html htmls<br />htt htx idc jav jav java java js ksh list<br />log lsp lst lsx m m mar mcf p pas php pl pl<br />pm py rexx rt rt rtf rtx s scm scm sdml sgm<br />sgm sgml sgml sh shtml shtml spc ssi talk<br />tcl tcsh text tsv txt uil uni unis uri uris<br />uu uue vcs wml wmls wsc xml zsh</pre>
 <p>E' possibile costruire altri riconoscitori, implementando l'interfaccia <em>FTPTextualExtensionRecognizer</em>, ma &egrave; molto pi&ugrave; conveniente istanziare la classe <em>ParametricTextualExtensionRecognizer</em> (<em>it.sauronsoftware.ftp4j.recognizers.ParametricTextualExtensionRecognizer</em>), che permette al programmatore di specificare liberamente la lista delle estensioni da riconoscere come testuali. In ogni caso un'istanza del riconoscitore va poi registrata presso il client:</p>
 <pre>client.setTextualExtensionRecognizer(myRecognizer);</pre>
-<a name="16"></a>
+<a name="17"></a>
 <h2>Il comando NOOP</h2>
 <p>Si immagini che il client &egrave; fermo senza fare nulla perch&eacute; in attesa di input da parte dell'utente. Pu&ograve; accadere che il server, non riscontrando alcuna attivit&agrave; per un periodo troppo lungo, chiuda la connessione con il client. Non appena il client tenter&agrave; un'operazione questa fallir&agrave;, poich&eacute; la linea di comunicazione &egrave; stata chiusa unilateralmente. Per evitare lo scadere del timeout di inattivit&agrave; &egrave; possibile inviare di tanto in tanto, durante i periodi di stasi, un comando NOOP al server. Questo genere di comando non esegue alcuna reale operazione, ed ha il solo effetto di far sapere al server che il client &egrave; ancora attivo.</p>
 <p>Con ftp4j &egrave; sufficiente chiamare:</p>
 <pre>client.noop();</pre>
-<a name="17"></a>
+<a name="18"></a>
 <h2>Comandi del sito e personalizzati</h2>
 <p>Per inviare un comando specifico del sito:</p>
 <pre>FTPReply reply = client.sendSiteCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>Per inviare comandi personalizzati:</p>
 <pre>FTPReply reply = client.sendCustomCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>Sia <em>sendSiteCommand()</em> che <em>sendCustomCommand()</em> restituiscono un oggetto <em>FTPReply</em> (<em>it.sauronsoftware.ftp4j.FTPReply</em>). Attraverso questo oggetto &egrave; possibile controllare la risposta ricevuta, recuperando il codice ed il messaggio che la costituiscono. L'interfaccia <em>FTPCodes </em>(<em>it.sauronsoftware.ftp4j.FTPCodes</em>) riporta i codici comuni delle risposte FTP, cos&igrave; che &egrave; possibile andare a raffrontare il codice di una <em>FTPReply</em> senza dover consultare le specifiche FTP.</p>
-<a name="18"></a>
+<a name="19"></a>
 <h2>Gestione delle eccezioni</h2>
 <p>La libreria ftp4j definisce cinque tipi di eccezione:</p>
 <ul>

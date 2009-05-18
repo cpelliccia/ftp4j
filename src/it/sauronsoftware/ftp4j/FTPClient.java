@@ -79,14 +79,14 @@ public class FTPClient {
 	public static final int SECURITY_FTP = 0;
 
 	/**
-	 * The constant for the FTPS (FTP over implicit TSL/SSL) security level.
+	 * The constant for the FTPS (FTP over implicit TLS/SSL) security level.
 	 * 
 	 * @since 1.4
 	 */
 	public static final int SECURITY_FTPS = 1;
 
 	/**
-	 * The constant for the FTPSS (FTP over explicit TSL/SSL) security level.
+	 * The constant for the FTPSS (FTP over explicit TLS/SSL) security level.
 	 * 
 	 * @since 1.4
 	 */
@@ -345,10 +345,10 @@ public class FTPClient {
 	 * level.
 	 * 
 	 * SECURITY_FTPS applies the FTPS security level, which is FTP over implicit
-	 * TSL/SSL.
+	 * TLS/SSL.
 	 * 
 	 * SECURITY_FTPES applies the FTPES security level, which is FTP over
-	 * explicit TSL/SSL.
+	 * explicit TLS/SSL.
 	 * 
 	 * @param security
 	 *            The security level.
