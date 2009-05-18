@@ -228,6 +228,11 @@ public class FTPClient {
 	private boolean utf8Supported = false;
 
 	/**
+	 * This flag indicates whether the data channel is encrypted.
+	 */
+	private boolean dataChannelEncrypted = false;
+
+	/**
 	 * This flag reports if there's any ongoing abortable data transfer
 	 * operation. Its value should be accessed only under the eye of the
 	 * abortLock synchronization object.
@@ -303,8 +308,6 @@ public class FTPClient {
 		}
 	}
 
-	/******** NEW FIELDS *************************************************************************/
-
 	/**
 	 * Sets the SSL socket factory used to negotiate SSL connections.
 	 * 
@@ -349,19 +352,25 @@ public class FTPClient {
 	 * 
 	 * @param security
 	 *            The security level.
+	 * @throws IllegalStateException
+	 *             If the client is already connected to a server.
 	 * @throws IllegalArgumentException
 	 *             If the supplied security level is not valid.
-	 * 
 	 * @since 1.4
 	 */
-	public void setSecurity(int security) throws IllegalArgumentException {
+	public void setSecurity(int security) throws IllegalStateException,
+			IllegalArgumentException {
 		if (security != SECURITY_FTP && security != SECURITY_FTPS
 				&& security != SECURITY_FTPES) {
 			throw new IllegalArgumentException("Invalid security");
 		}
 		synchronized (lock) {
+			if (connected) {
+				throw new IllegalStateException(
+						"The security level of the connection can't be "
+								+ "changed while the client is connected");
+			}
 			this.security = security;
-			// TODO security def values
 		}
 	}
 
@@ -377,7 +386,22 @@ public class FTPClient {
 		return security;
 	}
 
-	/*********************************************************************************************/
+	/**
+	 * Applies SSL encryption to an already open socket.
+	 * 
+	 * @param socket
+	 *            The already established socket.
+	 * @param host
+	 *            The logical destination host.
+	 * @param port
+	 *            The logical destination port.
+	 * @return The SSL socket.
+	 * @throws IOException
+	 *             If the SSL negotiation fails.
+	 */
+	private Socket ssl(Socket socket, String host, int port) throws IOException {
+		return sslSocketFactory.createSocket(socket, host, port, true);
+	}
 
 	/**
 	 * This method enables/disables the use of the passive mode.
@@ -684,7 +708,8 @@ public class FTPClient {
 
 	/**
 	 * This method connects the client to the remote FTP host, using the default
-	 * port value 21.
+	 * port value 21 (990 if security level is set to FTPS, see
+	 * {@link FTPClient#setSecurity(int)}).
 	 * 
 	 * @param host
 	 *            The hostname of the remote server.
@@ -700,7 +725,13 @@ public class FTPClient {
 	 */
 	public String[] connect(String host) throws IllegalStateException,
 			IOException, FTPIllegalReplyException, FTPException {
-		return connect(host, 21);
+		int def;
+		if (security == SECURITY_FTPS) {
+			def = 990;
+		} else {
+			def = 21;
+		}
+		return connect(host, def);
 	}
 
 	/**
@@ -735,6 +766,9 @@ public class FTPClient {
 				// Open the connection.
 				connection = connector.connectForCommunicationChannel(host,
 						port);
+				if (security == SECURITY_FTPS) {
+					connection = ssl(connection, host, port);
+				}
 				// Open the communication channel.
 				communication = new FTPCommunicationChannel(connection,
 						pickCharset());
@@ -752,14 +786,15 @@ public class FTPClient {
 					throw new FTPException(wm);
 				}
 				// Flag this object as connected to the remote host.
-				connected = true;
-				authenticated = false;
-				parser = null;
+				this.connected = true;
+				this.authenticated = false;
+				this.parser = null;
 				this.host = host;
 				this.port = port;
 				this.username = null;
 				this.password = null;
 				this.utf8Supported = false;
+				this.dataChannelEncrypted = false;
 				return wm.getMessages();
 			} catch (IOException e) {
 				// D'oh!
@@ -891,6 +926,20 @@ public class FTPClient {
 			if (!connected) {
 				throw new IllegalStateException("Client not connected");
 			}
+			// AUTH TLS command if security is FTPES
+			if (security == SECURITY_FTPES) {
+				communication.sendFTPCommand("AUTH TLS");
+				FTPReply r = communication.readFTPReply();
+				if (r.isSuccessCode()) {
+					communication.ssl(sslSocketFactory);
+				} else {
+					communication.sendFTPCommand("AUTH SSL");
+					r = communication.readFTPReply();
+					if (r.isSuccessCode()) {
+						communication.ssl(sslSocketFactory);
+					}
+				}
+			}
 			// Reset the authentication flag.
 			authenticated = false;
 			// Usefull flags.
@@ -1003,6 +1052,14 @@ public class FTPClient {
 			if (utf8Supported) {
 				communication.sendFTPCommand("OPTS UTF8 ON");
 				communication.readFTPReply();
+			}
+			// Data channel security.
+			if (security == SECURITY_FTPS || security == SECURITY_FTPES) {
+				communication.sendFTPCommand("PROT P");
+				FTPReply reply = communication.readFTPReply();
+				if (reply.isSuccessCode()) {
+					dataChannelEncrypted = true;
+				}
 			}
 		}
 	}
@@ -1659,13 +1716,7 @@ public class FTPClient {
 				throw new IllegalStateException("Client not authenticated");
 			}
 			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider;
-			// Active or passive?
-			if (passive) {
-				provider = openPassiveDataTransferChannel();
-			} else {
-				provider = openActiveDataTransferChannel();
-			}
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
@@ -1875,13 +1926,7 @@ public class FTPClient {
 				throw new IllegalStateException("Client not authenticated");
 			}
 			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider;
-			// Active or passive?
-			if (passive) {
-				provider = openPassiveDataTransferChannel();
-			} else {
-				provider = openActiveDataTransferChannel();
-			}
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
@@ -2200,14 +2245,7 @@ public class FTPClient {
 				throw new IllegalStateException("Client not authenticated");
 			}
 			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider;
-			// Active or passive?
-			if (passive) {
-				provider = openPassiveDataTransferChannel();
-			} else {
-				provider = openActiveDataTransferChannel();
-			}
-
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Select the type of contents.
 			int tp = type;
 			if (tp == TYPE_AUTO) {
@@ -2592,13 +2630,7 @@ public class FTPClient {
 				throw new IllegalStateException("Client not authenticated");
 			}
 			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider;
-			// Active or passive?
-			if (passive) {
-				provider = openPassiveDataTransferChannel();
-			} else {
-				provider = openActiveDataTransferChannel();
-			}
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Select the type of contents.
 			int tp = type;
 			if (tp == TYPE_AUTO) {
@@ -2752,13 +2784,45 @@ public class FTPClient {
 	}
 
 	/**
+	 * This method opens a data transfer channel.
+	 */
+	private FTPDataTransferConnectionProvider openDataTransferChannel()
+			throws IOException, FTPIllegalReplyException, FTPException,
+			FTPDataTransferException {
+		// Active or passive?
+		if (passive) {
+			return openPassiveDataTransferChannel();
+		} else {
+			return openActiveDataTransferChannel();
+		}
+	}
+
+	/**
 	 * This method opens a data transfer channel in active mode.
 	 */
 	private FTPDataTransferConnectionProvider openActiveDataTransferChannel()
 			throws IOException, FTPIllegalReplyException, FTPException,
 			FTPDataTransferException {
 		// Create a FTPDataTransferServer object.
-		FTPDataTransferServer server = new FTPDataTransferServer();
+		FTPDataTransferServer server = new FTPDataTransferServer() {
+			public Socket openDataTransferConnection()
+					throws FTPDataTransferException {
+				Socket socket = super.openDataTransferConnection();
+				if (dataChannelEncrypted) {
+					try {
+						socket = ssl(socket, socket.getInetAddress()
+								.getHostName(), socket.getPort());
+					} catch (IOException e) {
+						try {
+							socket.close();
+						} catch (Throwable t) {
+						}
+						throw new FTPDataTransferException(e);
+					}
+				}
+				return socket;
+			}
+		};
 		int port = server.getPort();
 		int p1 = port >>> 8;
 		int p2 = port & 0xff;
@@ -2830,9 +2894,13 @@ public class FTPClient {
 					throws FTPDataTransferException {
 				// Establish the connection.
 				Socket dtConnection;
+				String remoteHost = remoteAddress.getHostAddress();
 				try {
 					dtConnection = connector.connectForDataTransferChannel(
-							remoteAddress.getHostAddress(), remotePort);
+							remoteHost, remotePort);
+					if (dataChannelEncrypted) {
+						dtConnection = ssl(dtConnection, remoteHost, remotePort);
+					}
 				} catch (IOException e) {
 					throw new FTPDataTransferException(
 							"Cannot connect to the remote server", e);
@@ -3027,6 +3095,8 @@ public class FTPClient {
 				buffer.append("SECURITY_FTPES");
 				break;
 			}
+			buffer.append(", dataChannelEncrypted=");
+			buffer.append(dataChannelEncrypted);
 			buffer.append(", connector=");
 			buffer.append(connector);
 			buffer.append(", transfer mode=");

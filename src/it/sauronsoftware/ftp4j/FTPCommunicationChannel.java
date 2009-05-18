@@ -25,6 +25,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import javax.net.ssl.SSLSocketFactory;
+
 /**
  * This class is used to represent a communication channel with a FTP server.
  * 
@@ -42,6 +44,12 @@ public class FTPCommunicationChannel {
 	 * The connection.
 	 */
 	private Socket connection = null;
+
+	/**
+	 * The name of the charset that has to be used to encode and decode the
+	 * communication.
+	 */
+	private String charsetName = null;
 
 	/**
 	 * The stream-reader channel established with the remote server.
@@ -67,6 +75,7 @@ public class FTPCommunicationChannel {
 	public FTPCommunicationChannel(Socket connection, String charsetName)
 			throws IOException {
 		this.connection = connection;
+		this.charsetName = charsetName;
 		InputStream inStream = connection.getInputStream();
 		OutputStream outStream = connection.getOutputStream();
 		// Wrap the streams into reader and writer objects.
@@ -227,8 +236,29 @@ public class FTPCommunicationChannel {
 	 * @since 1.1
 	 */
 	public void changeCharset(String charsetName) throws IOException {
+		this.charsetName = charsetName;
 		reader.changeCharset(charsetName);
 		writer.changeCharset(charsetName);
+	}
+
+	/**
+	 * Applies SSL encryption to the communication channel.
+	 * 
+	 * @param sslSocketFactory
+	 *            The SSLSocketFactory used to produce the SSL connection.
+	 * @throws IOException
+	 *             If a I/O error occurs.
+	 * @since 1.4
+	 */
+	public void ssl(SSLSocketFactory sslSocketFactory) throws IOException {
+		String host = connection.getInetAddress().getHostName();
+		int port = connection.getPort();
+		connection = sslSocketFactory
+				.createSocket(connection, host, port, true);
+		InputStream inStream = connection.getInputStream();
+		OutputStream outStream = connection.getOutputStream();
+		reader = new NVTASCIIReader(inStream, charsetName);
+		writer = new NVTASCIIWriter(outStream, charsetName);
 	}
 
 }
