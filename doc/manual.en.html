@@ -62,7 +62,7 @@
   disconnect procedure. If you just want to break the connection, without 
   sending any advice to the server, call:</p>
 <pre>client.disconnect(false);</pre>
-<a name="6"></a>
+<a name="5"></a>
 <h2>Connecting through a proxy</h2>
 <p>The client connects to the server through a connector (an object implementing the <em>it.sauronsoftware.ftp4j.FTPConnector </em>interface), which returns to the client an already open connection (an object implementing the <em>it.sauronsoftware.ftp4j.FTPConnection</em> interface). That is why ftp4j could support a large set of proxies.</p>
 <p>The connector for a client instance can be setted with the <em>setConnector()</em> method, obviously before connecting the remote server:</p>
