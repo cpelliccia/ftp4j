@@ -1,3 +1,6 @@
+- Append/overwrite on download bug resolved.
+
+
 Version 1.4 - 2009/05/18
 
 - FTPS and FTPES support added

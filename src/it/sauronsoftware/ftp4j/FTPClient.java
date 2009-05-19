@@ -2553,7 +2553,7 @@ public class FTPClient {
 			FTPException, FTPDataTransferException, FTPAbortedException {
 		OutputStream outputStream = null;
 		try {
-			outputStream = new FileOutputStream(localFile, true);
+			outputStream = new FileOutputStream(localFile, restartAt > 0);
 		} catch (IOException e) {
 			throw new FTPDataTransferException(e);
 		}
