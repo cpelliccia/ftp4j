@@ -1,4 +1,5 @@
 - Append/overwrite on download bug resolved.
+- Blank files in textual mode bug resolved
 
 
 Version 1.4 - 2009/05/18
