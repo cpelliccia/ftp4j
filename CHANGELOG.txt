@@ -1,5 +1,7 @@
-- Append/overwrite on download bug resolved.
-- Blank files in textual mode bug resolved
+Version 1.4.1 - 2009/05/20
+
+- Bug resolved: append instead overwrite on download
+- Bug resolved: blank files in textual mode on upload/download
 
 
 Version 1.4 - 2009/05/18
