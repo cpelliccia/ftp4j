@@ -2306,7 +2306,7 @@ public class FTPClient {
 				if (tp == TYPE_TEXTUAL) {
 					Reader reader = new InputStreamReader(inputStream);
 					Writer writer = new OutputStreamWriter(
-							dataTransferOutputStream, "UTF-8");
+							dataTransferOutputStream, pickCharset());
 					char[] buffer = new char[1024];
 					while (done < streamLength) {
 						int l = reader.read(buffer, 0, (int) Math.min(
@@ -2315,6 +2315,7 @@ public class FTPClient {
 							throw new IOException("End of stream reached");
 						} else {
 							writer.write(buffer, 0, l);
+							writer.flush();
 							done += l;
 							if (listener != null) {
 								listener.transferred(l);
@@ -2687,12 +2688,13 @@ public class FTPClient {
 				// Let's do it!
 				if (tp == TYPE_TEXTUAL) {
 					Reader reader = new InputStreamReader(
-							dataTransferInputStream, "UTF-8");
+							dataTransferInputStream, pickCharset());
 					Writer writer = new OutputStreamWriter(outputStream);
 					char[] buffer = new char[1024];
 					int l;
 					while ((l = reader.read(buffer, 0, buffer.length)) != -1) {
 						writer.write(buffer, 0, l);
+						writer.flush();
 						if (listener != null) {
 							listener.transferred(l);
 						}
