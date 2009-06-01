@@ -31,7 +31,7 @@
 	<target name="doc">
 		<delete dir="${ftp4j.dirs.api}" />
 		<mkdir dir="${ftp4j.dirs.api}" />
-		<javadoc sourcepath="${ftp4j.dirs.src}" destdir="${ftp4j.dirs.api}" doctitle="ftp4j ${version}" linksource="yes" source="1.4" access="protected" author="true" version="true" verbose="true">
+		<javadoc sourcepath="${ftp4j.dirs.src}" destdir="${ftp4j.dirs.api}" doctitle="ftp4j ${version}" linksource="yes" access="protected" author="true" version="true" verbose="true">
 			<package name="it.sauronsoftware.ftp4j.*" />
 			<excludepackage name="it.sauronsoftware.ftp4j.base64" />
 		</javadoc>
