@@ -2084,7 +2084,7 @@ public class FTPClient {
 	}
 
 	/**
-	 * This method resumes an upload of a file to the remote server.
+	 * This method uploads a file to the remote server.
 	 * 
 	 * Calling this method blocks the current thread until the operation is
 	 * completed. The operation could be interrupted by another thread calling
@@ -2121,7 +2121,7 @@ public class FTPClient {
 	}
 
 	/**
-	 * This method resumes an upload of a file to the remote server.
+	 * This method uploads a file to the remote server.
 	 * 
 	 * Calling this method blocks the current thread until the operation is
 	 * completed. The operation could be interrupted by another thread calling
@@ -2167,8 +2167,7 @@ public class FTPClient {
 			throw new FTPDataTransferException(e);
 		}
 		try {
-			upload(file.getName(), inputStream, restartAt, restartAt, file
-					.length(), listener);
+			upload(file.getName(), inputStream, restartAt, restartAt, listener);
 		} catch (IllegalStateException e) {
 			throw e;
 		} catch (IOException e) {
@@ -2193,10 +2192,7 @@ public class FTPClient {
 	}
 
 	/**
-	 * This method resumes an upload to the remote server.
-	 * 
-	 * Note that no byte is skipped in the given inputStream. The restartAt
-	 * value is, in this case, an information for the remote server.
+	 * This method uploads a content to the remote server.
 	 * 
 	 * Calling this method blocks the current thread until the operation is
 	 * completed. The operation could be interrupted by another thread calling
@@ -2211,8 +2207,6 @@ public class FTPClient {
 	 *            The restart point (number of bytes already uploaded).
 	 * @param streamOffset
 	 *            The offset to skip in the stream.
-	 * @param streamLength
-	 *            The length of the data of the stream to upload.
 	 * @param listener
 	 *            The listener for the operation. Could be null.
 	 * @throws IllegalStateException
@@ -2233,10 +2227,10 @@ public class FTPClient {
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
 	 */
 	public void upload(String fileName, InputStream inputStream,
-			long restartAt, long streamOffset, long streamLength,
-			FTPDataTransferListener listener) throws IllegalStateException,
-			IOException, FTPIllegalReplyException, FTPException,
-			FTPDataTransferException, FTPAbortedException {
+			long restartAt, long streamOffset, FTPDataTransferListener listener)
+			throws IllegalStateException, IOException,
+			FTPIllegalReplyException, FTPException, FTPDataTransferException,
+			FTPAbortedException {
 		synchronized (lock) {
 			// Is this client connected?
 			if (!connected) {
@@ -2310,33 +2304,24 @@ public class FTPClient {
 					Writer writer = new OutputStreamWriter(
 							dataTransferOutputStream, pickCharset());
 					char[] buffer = new char[1024];
-					while (done < streamLength) {
-						int l = reader.read(buffer, 0, (int) Math.min(
-								buffer.length, streamLength - done));
-						if (l == -1) {
-							throw new IOException("End of stream reached");
-						} else {
-							writer.write(buffer, 0, l);
-							writer.flush();
-							done += l;
-							if (listener != null) {
-								listener.transferred(l);
-							}
+					int l;
+					while ((l = reader.read(buffer)) != -1) {
+						writer.write(buffer, 0, l);
+						writer.flush();
+						done += l;
+						if (listener != null) {
+							listener.transferred(l);
 						}
 					}
 				} else if (tp == TYPE_BINARY) {
 					byte[] buffer = new byte[1024];
-					while (done < streamLength) {
-						int l = inputStream.read(buffer, 0, (int) Math.min(
-								buffer.length, streamLength - done));
-						if (l == -1) {
-							throw new IOException("End of stream reached");
-						} else {
-							dataTransferOutputStream.write(buffer, 0, l);
-							done += l;
-							if (listener != null) {
-								listener.transferred(l);
-							}
+					int l;
+					while ((l = inputStream.read(buffer)) != -1) {
+						dataTransferOutputStream.write(buffer, 0, l);
+						dataTransferOutputStream.flush();
+						done += l;
+						if (listener != null) {
+							listener.transferred(l);
 						}
 					}
 				}

@@ -2,6 +2,8 @@ Version 1.4.2 -
 
 - In FTPS and FTPES mode the client now issues a "PBSZ 0" command
   before sending the "PROT P" one. Some servers require it.
+- Minor API change: the streamLength information is no more required
+  by the upload method.
 
 (Thanks to Lukas Loehrer)
 
