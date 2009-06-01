@@ -1,3 +1,11 @@
+Version 1.4.2 -
+
+- In FTPS and FTPES mode the client now issues a "PBSZ 0" command
+  before sending the "PROT P" one. Some servers require it.
+
+(Thanks to Lukas Loehrer)
+
+
 Version 1.4.1 - 2009/05/20
 
 - Bug resolved: append instead overwrite on download

@@ -1055,6 +1055,8 @@ public class FTPClient {
 			}
 			// Data channel security.
 			if (security == SECURITY_FTPS || security == SECURITY_FTPES) {
+				communication.sendFTPCommand("PBSZ 0");
+				communication.readFTPReply();
 				communication.sendFTPCommand("PROT P");
 				FTPReply reply = communication.readFTPReply();
 				if (reply.isSuccessCode()) {
