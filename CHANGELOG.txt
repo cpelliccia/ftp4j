@@ -1,3 +1,11 @@
+Version 1.4.3 - 2009/06/28
+
+- Enhancements in download/upload error handling
+- UnixListParser enhancements
+
+(Thanks to Stephan Fudeus)
+
+
 Version 1.4.2 - 2009/06/01
 
 - In FTPS and FTPES mode the client now issues a "PBSZ 0" command

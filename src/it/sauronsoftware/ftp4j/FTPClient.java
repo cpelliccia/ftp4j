@@ -1734,10 +1734,13 @@ public class FTPClient {
 			communication.sendFTPCommand(command);
 			Socket dtConnection;
 			try {
-				dtConnection = provider.openDataTransferConnection();
-				r = communication.readFTPReply();
-				if (r.getCode() != 150 && r.getCode() != 125) {
-					throw new FTPException(r);
+				try {
+					dtConnection = provider.openDataTransferConnection();
+				} finally {
+					r = communication.readFTPReply();
+					if (r.getCode() != 150 && r.getCode() != 125) {
+						throw new FTPException(r);
+					}
 				}
 			} finally {
 				provider.dispose();
@@ -1940,10 +1943,13 @@ public class FTPClient {
 			communication.sendFTPCommand("NLST");
 			Socket dtConnection;
 			try {
-				dtConnection = provider.openDataTransferConnection();
-				r = communication.readFTPReply();
-				if (r.getCode() != 150 && r.getCode() != 125) {
-					throw new FTPException(r);
+				try {
+					dtConnection = provider.openDataTransferConnection();
+				} finally {
+					r = communication.readFTPReply();
+					if (r.getCode() != 150 && r.getCode() != 125) {
+						throw new FTPException(r);
+					}
 				}
 			} finally {
 				provider.dispose();
@@ -2271,10 +2277,13 @@ public class FTPClient {
 			communication.sendFTPCommand("STOR " + fileName);
 			Socket dtConnection;
 			try {
-				dtConnection = provider.openDataTransferConnection();
-				r = communication.readFTPReply();
-				if (r.getCode() != 150 && r.getCode() != 125) {
-					throw new FTPException(r);
+				try {
+					dtConnection = provider.openDataTransferConnection();
+				} finally {
+					r = communication.readFTPReply();
+					if (r.getCode() != 150 && r.getCode() != 125) {
+						throw new FTPException(r);
+					}
 				}
 			} finally {
 				provider.dispose();
@@ -2648,10 +2657,13 @@ public class FTPClient {
 			communication.sendFTPCommand("RETR " + fileName);
 			Socket dtConnection;
 			try {
-				dtConnection = provider.openDataTransferConnection();
-				r = communication.readFTPReply();
-				if (r.getCode() != 150 && r.getCode() != 125) {
-					throw new FTPException(r);
+				try {
+					dtConnection = provider.openDataTransferConnection();
+				} finally {
+					r = communication.readFTPReply();
+					if (r.getCode() != 150 && r.getCode() != 125) {
+						throw new FTPException(r);
+					}
 				}
 			} finally {
 				provider.dispose();
