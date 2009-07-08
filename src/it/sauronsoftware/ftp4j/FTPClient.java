@@ -214,6 +214,12 @@ public class FTPClient {
 	private int type = TYPE_AUTO;
 
 	/**
+	 * A flag used to mark whether the connected server supports the resume of
+	 * broken transfers.
+	 */
+	private boolean restSupported = false;
+
+	/**
 	 * The name of the charset used to establish textual communications. If not
 	 * null the client will use always the given charset. If null the client
 	 * tries to auto-detect the server charset. If this attempt fails the client
@@ -1041,10 +1047,16 @@ public class FTPClient {
 				String[] lines = r.getMessages();
 				for (int i = 1; i < lines.length - 1; i++) {
 					String feat = lines[i].trim();
+					// REST STREAM supported?
+					if ("REST STREAM".equalsIgnoreCase(feat)) {
+						restSupported = true;
+						continue;
+					}
 					// UTF8 supported?
 					if ("UTF8".equalsIgnoreCase(feat)) {
 						utf8Supported = true;
 						communication.changeCharset("UTF-8");
+						continue;
 					}
 				}
 			}
@@ -2262,16 +2274,14 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
-			// Send the REST command.
-			communication.sendFTPCommand("REST " + restartAt);
-			r = communication.readFTPReply();
-			int c = r.getCode();
-			if (c == 502 && restartAt > 0) {
-				throw new FTPException(502,
-						"Resume is not supported by this server");
-			} else if (c != 350) {
-				provider.dispose();
-				throw new FTPException(r);
+			// REST command (if supported and/or requested).
+			if (restSupported || restartAt > 0) {
+				communication.sendFTPCommand("REST " + restartAt);
+				r = communication.readFTPReply();
+				if (r.getCode() != 350) {
+					provider.dispose();
+					throw new FTPException(r);
+				}
 			}
 			// Send the STOR command.
 			communication.sendFTPCommand("STOR " + fileName);
@@ -2642,16 +2652,14 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
-			// Send the REST command.
-			communication.sendFTPCommand("REST " + restartAt);
-			r = communication.readFTPReply();
-			int c = r.getCode();
-			if (c == 502 && restartAt > 0) {
-				throw new FTPException(502,
-						"Resume is not supported by this server");
-			} else if (c != 350) {
-				provider.dispose();
-				throw new FTPException(r);
+			// REST command (if supported and/or requested).
+			if (restSupported || restartAt > 0) {
+				communication.sendFTPCommand("REST " + restartAt);
+				r = communication.readFTPReply();
+				if (r.getCode() != 350) {
+					provider.dispose();
+					throw new FTPException(r);
+				}
 			}
 			// Send the RETR command.
 			communication.sendFTPCommand("RETR " + fileName);

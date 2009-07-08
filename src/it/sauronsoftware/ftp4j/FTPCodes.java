@@ -29,8 +29,10 @@ public interface FTPCodes {
 	public int SYNTAX_ERROR = 500;
 
 	public int SYNTAX_ERROR_IN_PARAMETERS = 501;
+	
+	public int COMMAND_NOT_IMPLEMENTED = 502;
 
-	public int COMMAND_NOT_IMPLEMENTED = 503;
+	public int BAD_SEQUENCE_OF_COMMANDS = 503;
 
 	public int COMMAND_PARAMETER_NOT_IMPLEMENTED = 504;
 
