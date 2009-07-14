@@ -1,4 +1,4 @@
-Version 1.4.3 - 2009/07/
+Version 1.4.3 - 2009/07/14
 
 - Enhancements in download/upload error handling
 - UnixListParser enhancements
