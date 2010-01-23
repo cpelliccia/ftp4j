@@ -18,19 +18,18 @@
  */
 package it.sauronsoftware.ftp4j.listparsers;
 
+import it.sauronsoftware.ftp4j.FTPFile;
+import it.sauronsoftware.ftp4j.FTPListParseException;
+import it.sauronsoftware.ftp4j.FTPListParser;
+
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import it.sauronsoftware.ftp4j.FTPFile;
-import it.sauronsoftware.ftp4j.FTPListParseException;
-import it.sauronsoftware.ftp4j.FTPListParser;
 
 /**
  * This parser can handle NetWare list responses.
@@ -48,8 +47,11 @@ public class NetWareListParser implements FTPListParser {
 			"MMM dd yyyy HH:mm", Locale.US);
 
 	public FTPFile[] parse(String[] lines) throws FTPListParseException {
-		int currentYear = new GregorianCalendar().get(Calendar.YEAR);
 		int size = lines.length;
+		// What's the date today?
+		Calendar now = Calendar.getInstance();
+		// Ok, starts parsing.
+		int currentYear = now.get(Calendar.YEAR);
 		FTPFile[] ret = new FTPFile[size];
 		for (int i = 0; i < size; i++) {
 			Matcher m = PATTERN.matcher(lines[i]);
@@ -86,10 +88,13 @@ public class NetWareListParser implements FTPListParser {
 				mdString.append(' ');
 				mdString.append(dayString);
 				mdString.append(' ');
+				boolean checkYear = false;
 				if (yearString == null) {
 					mdString.append(currentYear);
+					checkYear = true;
 				} else {
 					mdString.append(yearString);
+					checkYear = false;
 				}
 				mdString.append(' ');
 				if (hourString != null && minuteString != null) {
@@ -110,6 +115,14 @@ public class NetWareListParser implements FTPListParser {
 					md = DATE_FORMAT.parse(mdString.toString());
 				} catch (ParseException e) {
 					throw new FTPListParseException();
+				}
+				if (checkYear) {
+					Calendar mc = Calendar.getInstance();
+					mc.setTime(md);
+					if (mc.after(now)) {
+						mc.set(Calendar.YEAR, currentYear - 1);
+						md = mc.getTime();
+					}
 				}
 				ret[i].setModifiedDate(md);
 				ret[i].setName(nameString);

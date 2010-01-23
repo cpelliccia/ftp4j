@@ -1,3 +1,10 @@
+Version TBD
+
+- A date parsing bug was fixed in UnixListParser and 
+  NetWareListParser components.
+
+(Thanks to Liu Yan)
+
 Version 1.4.3 - 2009/07/14
 
 - Enhancements in download/upload error handling
