@@ -1,5 +1,6 @@
-Version TBD
+Version 1.5 - TBD
 
+- MLSD command support added.
 - A date parsing bug was fixed in UnixListParser and 
   NetWareListParser components.
 

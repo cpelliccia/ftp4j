@@ -16,33 +16,22 @@
  * License version 2.1 along with this program.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-package it.sauronsoftware.ftp4j.connectors;
+package it.sauronsoftware.ftp4j.listparsers;
 
-import it.sauronsoftware.ftp4j.FTPConnector;
-
-import java.io.IOException;
-import java.net.Socket;
+import it.sauronsoftware.ftp4j.FTPFile;
+import it.sauronsoftware.ftp4j.FTPListParseException;
+import it.sauronsoftware.ftp4j.FTPListParser;
 
 /**
- * The DirectConnector connects the remote host with a straight socket
- * connection, using no proxy.
+ * This parser can handle the standard MLST/MLSD responses (RFC 3659).
  * 
  * @author Carlo Pelliccia
+ * @since 1.5
  */
-public class DirectConnector implements FTPConnector {
+public class MLSDListParser implements FTPListParser {
 
-	private Socket connect(String host, int port) throws IOException {
-		return new Socket(host, port);
-	}
-
-	public Socket connectForCommunicationChannel(String host, int port)
-			throws IOException {
-		return connect(host, port);
-	}
-
-	public Socket connectForDataTransferChannel(String host, int port)
-			throws IOException {
-		return connect(host, port);
+	public FTPFile[] parse(String[] lines) throws FTPListParseException {
+		return null;
 	}
 
 }

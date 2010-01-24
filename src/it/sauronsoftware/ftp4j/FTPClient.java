@@ -1,7 +1,7 @@
 /*
  * ftp4j - A pure Java FTP client library
  * 
- * Copyright (C) 2008-2009 Carlo Pelliccia (www.sauronsoftware.it)
+ * Copyright (C) 2008-2010 Carlo Pelliccia (www.sauronsoftware.it)
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License version
@@ -23,6 +23,7 @@ import it.sauronsoftware.ftp4j.extrecognizers.DefaultTextualExtensionRecognizer;
 import it.sauronsoftware.ftp4j.extrecognizers.ParametricTextualExtensionRecognizer;
 import it.sauronsoftware.ftp4j.listparsers.DOSListParser;
 import it.sauronsoftware.ftp4j.listparsers.EPLFListParser;
+import it.sauronsoftware.ftp4j.listparsers.MLSDListParser;
 import it.sauronsoftware.ftp4j.listparsers.NetWareListParser;
 import it.sauronsoftware.ftp4j.listparsers.UnixListParser;
 
@@ -67,7 +68,7 @@ import javax.net.ssl.SSLSocketFactory;
  * server.
  * 
  * @author Carlo Pelliccia
- * @version 1.4
+ * @version 1.5
  */
 public class FTPClient {
 
@@ -112,6 +113,33 @@ public class FTPClient {
 	 * is", without any charset conversion.
 	 */
 	public static final int TYPE_BINARY = 2;
+
+	/**
+	 * The constant for the MLSD policy that causes the client to use the MLSD
+	 * command instead of LIST, but only if the MLSD command is explicitly
+	 * supported by the server (the support is tested with the FEAT command).
+	 * 
+	 * @since 1.5
+	 */
+	public static final int MLSD_IF_SUPPORTED = 0;
+
+	/**
+	 * The constant for the MLSD policy that causes the client to use always the
+	 * MLSD command instead of LIST, also if the MLSD command is not explicitly
+	 * supported by the server (the support is tested with the FEAT command).
+	 * 
+	 * @since 1.5
+	 */
+	public static final int MLSD_ALWAYS = 1;
+
+	/**
+	 * The constant for the MLSD policy that causes the client to use always the
+	 * LIST command, also if the MLSD command is explicitly supported by the
+	 * server (the support is tested with the FEAT command).
+	 * 
+	 * @since 1.5
+	 */
+	public static final int MLSD_NEVER = 2;
 
 	/**
 	 * The DateFormat object used to parse the reply to a MDTM command.
@@ -208,10 +236,19 @@ public class FTPClient {
 
 	/**
 	 * The type of the data transfer contents (auto, textual, binary). The value
-	 * should be one of TYPE_AUTO, TYPE_TEXTUAL and TYPE_BINARY constants.
-	 * Default value is TYPE_AUTO.
+	 * should be one of {@link FTPClient#TYPE_AUTO},
+	 * {@link FTPClient#TYPE_TEXTUAL} and {@link FTPClient#TYPE_BINARY}
+	 * constants. Default value is TYPE_AUTO.
 	 */
 	private int type = TYPE_AUTO;
+
+	/**
+	 * The MLSD command policy. The value should be one of
+	 * {@link FTPClient#MLSD_IF_SUPPORTED}, {@link FTPClient#MLSD_ALWAYS} and
+	 * {@link FTPClient#MLSD_NEVER} constants. Default value is
+	 * MLSD_IF_SUPPORTED.
+	 */
+	private int mlsdPolicy = MLSD_IF_SUPPORTED;
 
 	/**
 	 * A flag used to mark whether the connected server supports the resume of
@@ -232,6 +269,12 @@ public class FTPClient {
 	 * encoding.
 	 */
 	private boolean utf8Supported = false;
+
+	/**
+	 * A flag used to mark whether the connected server supports the MLSD
+	 * command (RFC 3659).
+	 */
+	private boolean mlsdSupported = false;
 
 	/**
 	 * This flag indicates whether the data channel is encrypted.
@@ -281,6 +324,7 @@ public class FTPClient {
 	 */
 	public FTPClient() {
 		// The built-in parsers.
+		addListParser(new MLSDListParser());
 		addListParser(new UnixListParser());
 		addListParser(new DOSListParser());
 		addListParser(new EPLFListParser());
@@ -374,7 +418,7 @@ public class FTPClient {
 			if (connected) {
 				throw new IllegalStateException(
 						"The security level of the connection can't be "
-								+ "changed while the client is connected");
+						+ "changed while the client is connected");
 			}
 			this.security = security;
 		}
@@ -427,14 +471,16 @@ public class FTPClient {
 	 * The type supplied should be one of TYPE_AUTO, TYPE_TEXTUAL or TYPE_BINARY
 	 * constants. Default value is TYPE_AUTO.
 	 * 
-	 * TYPE_TEXTUAL means that the data sent or received is treated as textual
-	 * information. This implies charset conversion during the transfer.
+	 * {@link FTPClient#TYPE_TEXTUAL} means that the data sent or received is
+	 * treated as textual information. This implies charset conversion during
+	 * the transfer.
 	 * 
-	 * TYPE_BINARY means that the data sent or received is treated as a binary
-	 * stream. The data is taken "as is", without any charset conversion.
+	 * {@link FTPClient#TYPE_BINARY} means that the data sent or received is
+	 * treated as a binary stream. The data is taken "as is", without any
+	 * charset conversion.
 	 * 
-	 * TYPE_AUTO lets the client pick between textual and binary types,
-	 * depending on the extension of the file exchanged, using a
+	 * {@link FTPClient#TYPE_AUTO} lets the client pick between textual and
+	 * binary types, depending on the extension of the file exchanged, using a
 	 * FTPTextualExtensionRecognizer instance, which could be set through the
 	 * setTextualExtensionRecognizer method. The default recognizer is an
 	 * instance of {@link DefaultTextualExtensionRecognizer}.
@@ -460,11 +506,64 @@ public class FTPClient {
 	 * the contents during a data transfer.
 	 * 
 	 * @return The type as a numeric value. The value could be compared to the
-	 *         constants TYPE_AUTO, TYPE_BINARY and TYPE_TEXTUAL.
+	 *         constants {@link FTPClient#TYPE_AUTO},
+	 *         {@link FTPClient#TYPE_BINARY} and {@link FTPClient#TYPE_TEXTUAL}.
 	 */
 	public int getType() {
 		synchronized (lock) {
 			return type;
+		}
+	}
+
+	/**
+	 * This method lets the user control how the client chooses whether to use
+	 * or not the MLSD command (RFC 3659) instead of the base LIST command.
+	 * 
+	 * The type supplied should be one of MLSD_IF_SUPPORTED, MLSD_ALWAYS or
+	 * MLSD_NEVER constants. Default value is MLSD_IF_SUPPORTED.
+	 * 
+	 * {@link FTPClient#MLSD_IF_SUPPORTED} means that the client should use the
+	 * MLSD command only if it is explicitly supported by the server.
+	 * 
+	 * {@link FTPClient#MLSD_ALWAYS} means that the client should use always the
+	 * MLSD command, also if the MLSD command is not explicitly supported by the
+	 * server
+	 * 
+	 * {@link FTPClient#MLSD_NEVER} means that the client should use always only
+	 * the LIST command, also if the MLSD command is explicitly supported by the
+	 * server.
+	 * 
+	 * The support for the MLSD command is tested by the client after the
+	 * connection to the remote server, with the FEAT command.
+	 * 
+	 * @param mlsdPolicy
+	 *            The MLSD policy.
+	 * @throws IllegalArgumentException
+	 *             If the supplied MLSD policy value is not valid.
+	 * @since 1.5
+	 */
+	public void setMLSDPolicy(int mlsdPolicy) throws IllegalArgumentException {
+		if (type != MLSD_IF_SUPPORTED && type != MLSD_ALWAYS && type != MLSD_NEVER) {
+			throw new IllegalArgumentException("Invalid MLSD policy");
+		}
+		synchronized (lock) {
+			this.mlsdPolicy = mlsdPolicy;
+		}
+	}
+
+	/**
+	 * This method returns the value suggesting how the client chooses whether
+	 * to use or not the MLSD command (RFC 3659) instead of the base LIST
+	 * command.
+	 * 
+	 * @return The MLSD policy as a numeric value. The value could be compared
+	 *         to the constants {@link FTPClient#MLSD_IF_SUPPORTED},
+	 *         {@link FTPClient#MLSD_ALWAYS} and {@link FTPClient#MLSD_NEVER}.
+	 * @since 1.5
+	 */
+	public int getMLSDPolicy() {
+		synchronized (lock) {
+			return mlsdPolicy;
 		}
 	}
 
@@ -782,7 +881,7 @@ public class FTPClient {
 						.hasNext();) {
 					communication
 							.addCommunicationListener((FTPCommunicationListener) i
-									.next());
+							.next());
 				}
 				// Welcome message.
 				FTPReply wm = communication.readFTPReply();
@@ -1056,6 +1155,11 @@ public class FTPClient {
 					if ("UTF8".equalsIgnoreCase(feat)) {
 						utf8Supported = true;
 						communication.changeCharset("UTF-8");
+						continue;
+					}
+					// MLSD supported?
+					if ("MLSD".equalsIgnoreCase(feat)) {
+						mlsdSupported = true;
 						continue;
 					}
 				}
@@ -1738,11 +1842,21 @@ public class FTPClient {
 				provider.dispose();
 				throw new FTPException(r);
 			}
-			// Send the list command.
-			String command = "LIST";
+			// MLSD or LIST command?
+			boolean mlsdCommand;
+			if (mlsdPolicy == MLSD_IF_SUPPORTED) {
+				mlsdCommand = mlsdSupported;
+			} else if (mlsdPolicy == MLSD_ALWAYS) {
+				mlsdCommand = true;
+			} else {
+				mlsdCommand = false;
+			}
+			String command = mlsdCommand ? "MLSD" : "LIST";
+			// Adds the file/directory selector.
 			if (fileSpec != null && fileSpec.length() > 0) {
 				command += " " + fileSpec;
 			}
+			// Sends the command.
 			communication.sendFTPCommand(command);
 			Socket dtConnection;
 			try {
@@ -1817,24 +1931,31 @@ public class FTPClient {
 			}
 			// Parse the list.
 			FTPFile[] ret = null;
-			if (parser == null) {
-				// Try to parse the list with every parser available.
-				for (Iterator i = listParsers.iterator(); i.hasNext();) {
-					FTPListParser aux = (FTPListParser) i.next();
-					try {
-						// Let's try!
-						ret = aux.parse(list);
-						// This parser smells good!
-						parser = aux;
-						// Leave the loop.
-						break;
-					} catch (FTPListParseException e) {
-						// Let's try the next one.
-						continue;
-					}
-				}
-			} else {
+			if (mlsdCommand) {
+				// Forces the MLSDListParser.
+				MLSDListParser parser = new MLSDListParser();
 				ret = parser.parse(list);
+			} else {
+				// Searches for the appropriate parser.
+				if (parser == null) {
+					// Try to parse the list with every parser available.
+					for (Iterator i = listParsers.iterator(); i.hasNext();) {
+						FTPListParser aux = (FTPListParser) i.next();
+						try {
+							// Let's try!
+							ret = aux.parse(list);
+							// This parser smells good!
+							parser = aux;
+							// Leave the loop.
+							break;
+						} catch (FTPListParseException e) {
+							// Let's try the next one.
+							continue;
+						}
+					}
+				} else {
+					ret = parser.parse(list);
+				}
 			}
 			if (ret == null) {
 				// None of the parsers can handle the list response.
