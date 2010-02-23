@@ -248,7 +248,7 @@ public class FTPClient {
 	 * {@link FTPClient#MLSD_NEVER} constants. Default value is
 	 * MLSD_IF_SUPPORTED.
 	 */
-	private int mlsdPolicy = MLSD_IF_SUPPORTED;
+	private int mlsdPolicy = MLSD_NEVER;// XXX MLSD_IF_SUPPORTED;
 
 	/**
 	 * A flag used to mark whether the connected server supports the resume of
@@ -324,7 +324,7 @@ public class FTPClient {
 	 */
 	public FTPClient() {
 		// The built-in parsers.
-		addListParser(new MLSDListParser());
+		// XXX addListParser(new MLSDListParser());
 		addListParser(new UnixListParser());
 		addListParser(new DOSListParser());
 		addListParser(new EPLFListParser());
@@ -1833,15 +1833,14 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
 			if (!r.isSuccessCode()) {
-				provider.dispose();
 				throw new FTPException(r);
 			}
+			// Prepares the connection for the data transfer.
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// MLSD or LIST command?
 			boolean mlsdCommand;
 			if (mlsdPolicy == MLSD_IF_SUPPORTED) {
@@ -2063,15 +2062,14 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
 			if (!r.isSuccessCode()) {
-				provider.dispose();
 				throw new FTPException(r);
 			}
+			// Prepares the connection for the data transfer.
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Send the NLST command.
 			communication.sendFTPCommand("NLST");
 			Socket dtConnection;
@@ -2379,8 +2377,6 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Select the type of contents.
 			int tp = type;
 			if (tp == TYPE_AUTO) {
@@ -2400,10 +2396,11 @@ public class FTPClient {
 				communication.sendFTPCommand("REST " + restartAt);
 				r = communication.readFTPReply();
 				if (r.getCode() != 350) {
-					provider.dispose();
 					throw new FTPException(r);
 				}
 			}
+			// Prepares the connection for the data transfer.
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Send the STOR command.
 			communication.sendFTPCommand("STOR " + fileName);
 			Socket dtConnection;
@@ -2757,8 +2754,6 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Prepares the connection for the data transfer.
-			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Select the type of contents.
 			int tp = type;
 			if (tp == TYPE_AUTO) {
@@ -2778,10 +2773,11 @@ public class FTPClient {
 				communication.sendFTPCommand("REST " + restartAt);
 				r = communication.readFTPReply();
 				if (r.getCode() != 350) {
-					provider.dispose();
 					throw new FTPException(r);
 				}
 			}
+			// Prepares the connection for the data transfer.
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
 			// Send the RETR command.
 			communication.sendFTPCommand("RETR " + fileName);
 			Socket dtConnection;
@@ -3015,8 +3011,15 @@ public class FTPClient {
 		int b4 = Integer.parseInt(st.nextToken());
 		int p1 = Integer.parseInt(st.nextToken());
 		int p2 = Integer.parseInt(st.nextToken());
-		final InetAddress remoteAddress = InetAddress.getByAddress(new byte[] {
-				(byte) b1, (byte) b2, (byte) b3, (byte) b4 });
+		final InetAddress remoteAddress;
+		// Ignore address?
+		String useSuggestedAddress = System.getProperty(FTPKeys.PASSIVE_DT_USE_SUGGESTED_ADDRESS);
+		if ("true".equalsIgnoreCase(useSuggestedAddress) || "yes".equalsIgnoreCase(useSuggestedAddress)
+				|| "1".equals(useSuggestedAddress)) {
+			remoteAddress = InetAddress.getByAddress(new byte[] { (byte) b1, (byte) b2, (byte) b3, (byte) b4 });
+		} else {
+			remoteAddress = InetAddress.getByName(host);
+		}
 		final int remotePort = (p1 << 8) | p2;
 		FTPDataTransferConnectionProvider provider = new FTPDataTransferConnectionProvider() {
 

@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>ftp4j 1.4 manual</title>
+<title>ftp4j 1.5 manual</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 </head>
 <body>
-<h1>ftp4j 1.4 manual</h1>
+<h1>ftp4j 1.5 manual</h1>
 <ul>
   <li><a href="#1">Requirements</a></li>
   <li><a href="#2">Installation</a></li>
@@ -293,7 +293,12 @@ public class MyTransferListener implements FTPDataTransferListener {
 <pre>client.setPassive(false); // Active mode</pre>
 <pre>client.setPassive(true); // Passive mode</pre>
 <p>The default value for a ftp4j client passive flag is <em>true</em>: if you never call <em>setPassive(false)</em> your client will act ever asking the passive mode to the server before every transfer.</p>
-<p>In the active transfer mode, the following system properties could be set:</p>
+<p>In the passive transfer mode, the following system property can be set:</p>
+<ul>
+  <li><p><em>ftp4j.passiveDataTransfer.useSuggestedAddress</em><br />
+  Setting this property value to &quot;true&quot;, &quot;yes&quot; or &quot;1&quot; (case insensitive) causes the client to use the address suggested by the server as a positive reply to a PASV command. To avoid frequently reported NAT problems, infact, ftp4j doesn't trust the IP address declared by the server. The response to the the PASV command is used only for the port information, while the address is replaced with the host name used for the initial connection to the server. By activating this feature the developer can force ftp4j to trust and use the address supplied by the server every time a passive data transfer is being negotiated.</p></li>
+</ul>
+<p>In the active transfer mode, the following system properties can be set:</p>
 <ul>
   <li><p><em>ftp4j.activeDataTransfer.hostAddress</em><br />
   Host address. The client will forward to the server the given address, when the server is requested to perform a connection to the client. The value should be a valid IPv4 address in the <em>a.b.c.d</em> form. I.e. <em>178.12.34.167</em>. If the value is not supplied, the client resolves automatically the system address. But if the client runs in a LAN, connecting an external server through a router with port-forwarding service for active data transfers, the auto-detected address could not be the right one. This also should happen when the system has more network interfaces. By using this system property this kind of problems can be solved.</p></li>

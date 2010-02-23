@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>Manuale di ftp4j 1.4</title>
+<title>Manuale di ftp4j 1.5</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 </head>
 <body>
-<h1>Manuale di ftp4j 1.4</h1>
+<h1>Manuale di ftp4j 1.5</h1>
 <ul>
   <li><a href="#1">Requisiti</a></li>
   <li><a href="#2">Installazione</a></li>
@@ -229,10 +229,15 @@ public class MyTransferListener implements FTPDataTransferListener {
 <pre>client.setPassive(false); // Server attivo</pre>
 <pre>client.setPassive(true); // Server passivo</pre>
 <p>Il valore predefinito &egrave; <em>true</em>, cio&egrave; al server viene chiesto di restare passivo in modo che sia sempre il client a connettersi.</p>
+<p>Quando il modo di trasferimento &egrave; impostato su <em>passivo</em>, la seguente propriet&agrave; di sistema pu&ograve; essere impostata:</p>
+<ul>
+  <li><p><em>ftp4j.passiveDataTransfer.useSuggestedAddress</em><br />
+  Impostare questa propriet&agrave; su &quot;true&quot;, &quot;yes&quot; o &quot;1&quot; (case insensitive) fa s&iacute; che il client usi l'indirizzo suggerito dal server nella risposta positiva ad un comando PASV. Per evitare i problemi di NAT frequentemente riportati, infatti, ftp4j preferisce non fidarsi degli indirizzi IP dichiarati dai server. Quindi la risposta ad un comando PASV viene interpretata solo per ricavare il numero di porta da usare per la connessione, mentre le informazioni circa l'indirizzo del server vengono scartate e rimpiazzate con il nome host usato per la connessione iniziale al server FTP. Usando la propriet&agrave; si forza ftp4j a fidarsi della risposta al comando PASV e di usare l'indirizzo specificato per il trasferimento dati passivo.</p></li>
+</ul>
 <p>Quando il modo di trasferimento &egrave; impostato su <em>attivo</em>, le seguenti propriet&agrave; di sistema possono essere impostate:</p>
 <ul>
   <li><p><em>ftp4j.activeDataTransfer.hostAddress</em><br />
-  Indorizzo dell'host. Il client indica al server a quale indirizzo deve connettersi, quando un trasferimento in modo attivo ha inizio. Il client, per default, domanda al sistema operativo quale sia il suo indirizzo di rete predefinito, che poi comunica al server. Il server usa l'indirizzo suggerito per connettersi al client. In alcune condizioni l'indirizzo individuato non &egrave; quello corretto. Accade, ad esempio, quando il sistema dispone di pi&ugrave; di un indirizzo di rete, e quello che si deve usare non &egrave; il principale. Accade anche quando si &egrave; in una LAN e ci si connette al server remoto passando attraverso un router, che poi trasferisce all'indietro le connessioni mediante un servizio di port-forwarding. In quest'ultimo caso l'indirizzo da fornire al server &egrave; quello del router, che per&ograve; la libreria non ha modo di individuare automaticamente. Allora &egrave; possibile valorizzare la propriet&agrave; per forzare l'uso di uno specifico indirizzo. Il valore deve essere un indirizzo IPv4 valido, nella forma <em>a.b.c.d</em>. Ad esempio: <em>178.12.34.167</em></p></li>
+  Indirizzo dell'host. Il client indica al server a quale indirizzo deve connettersi, quando un trasferimento in modo attivo ha inizio. Il client, per default, domanda al sistema operativo quale sia il suo indirizzo di rete predefinito, che poi comunica al server. Il server usa l'indirizzo suggerito per connettersi al client. In alcune condizioni l'indirizzo individuato non &egrave; quello corretto. Accade, ad esempio, quando il sistema dispone di pi&ugrave; di un indirizzo di rete, e quello che si deve usare non &egrave; il principale. Accade anche quando si &egrave; in una LAN e ci si connette al server remoto passando attraverso un router, che poi trasferisce all'indietro le connessioni mediante un servizio di port-forwarding. In quest'ultimo caso l'indirizzo da fornire al server &egrave; quello del router, che per&ograve; la libreria non ha modo di individuare automaticamente. Allora &egrave; possibile valorizzare la propriet&agrave; per forzare l'uso di uno specifico indirizzo. Il valore deve essere un indirizzo IPv4 valido, nella forma <em>a.b.c.d</em>. Ad esempio: <em>178.12.34.167</em></p></li>
   <li><p><em>ftp4j.activeDataTransfer.portRange</em><br />
   Intervallo di porte. Il client, quando chiede al server di connettersi per uno scambio dati, si mette in ascolto su una porta del sistema. Normalmente questa porta viene scelta casualmente tra tutte quelle disponibili. In alcuni casi questo comportamento non &egrave; desiderabile. Ad esempio nel caso in cui sia configurato un port-forwarding su un router solo per un certo intervallo. Allora &egrave; possibile forzare l'uso dell'intervallo desiderato specificandolo nella forma <em>inizio-fine</em>, ad esempio <em>6000-7000</em> per fare in modo che il client utilizzi solo le porte tra la 6000 e la 7000 (estremi inclusi).</p></li>
   <li><p><em>ftp4j.activeDataTransfer.acceptTimeout</em><br />

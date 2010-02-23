@@ -3,8 +3,17 @@ Version 1.5 - TBD
 - MLSD command support added.
 - A date parsing bug was fixed in UnixListParser and 
   NetWareListParser components.
+- The library behaviour for passive data transfers has been
+  changed. The client trusts no longer the IP address returned
+  by the server in response to a PASV command. The library
+  now connects always to the same host name supplied for the
+  initial connection. This behaviour solves many frequently
+  reported NAT problems. However, the old behaviour can be
+  restored, by setting to true the value of the system property
+  called ftp4j.passiveDataTransfer.useSuggestedAddress.
 
-(Thanks to Liu Yan)
+(Thanks to Liu Yan and Roberto Bellandi)
+
 
 Version 1.4.3 - 2009/07/14
 

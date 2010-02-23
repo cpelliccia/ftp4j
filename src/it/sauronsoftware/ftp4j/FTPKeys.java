@@ -48,6 +48,22 @@ interface FTPKeys {
 	public String ACTIVE_DT_ACCEPT_TIMEOUT = "ftp4j.activeDataTransfer.acceptTimeout";
 
 	/**
+	 * The key used to retrieve the system property that can force the client to
+	 * exchange data by connecting to the IP address suggested by the server
+	 * after a PASV command. To avoid frequently reported NAT problems, ftp4j
+	 * connects always to the host supplied in the
+	 * {@link FTPClient#connect(String)} or
+	 * {@link FTPClient#connect(String, int)} methods. The response of a PASV
+	 * command is used only to decode the port for the connection. By using the
+	 * value &quot;true&quot;, &quot;yes&quot; or &quot;1&quot; on this system
+	 * property, ftp4j will change its behaviour and it will connect to the IP
+	 * address returned from the server.
+	 * 
+	 * @since 1.5
+	 */
+	public String PASSIVE_DT_USE_SUGGESTED_ADDRESS = "ftp4j.passiveDataTransfer.useSuggestedAddress";
+
+	/**
 	 * The key used to retrieve the system property with the delay for a NOOP
 	 * operation performed automatically during long data transfers. The value
 	 * should be ms. The value 0 disable the auto NOOP feature. Default value is
