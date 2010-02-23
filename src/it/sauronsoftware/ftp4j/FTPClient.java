@@ -324,11 +324,11 @@ public class FTPClient {
 	 */
 	public FTPClient() {
 		// The built-in parsers.
-		addListParser(new MLSDListParser());
 		addListParser(new UnixListParser());
 		addListParser(new DOSListParser());
 		addListParser(new EPLFListParser());
 		addListParser(new NetWareListParser());
+		addListParser(new MLSDListParser());
 	}
 
 	/**
@@ -1882,8 +1882,7 @@ public class FTPClient {
 				// Opens the data transfer connection.
 				dataTransferInputStream = dtConnection.getInputStream();
 				// Let's do it!
-				dataReader = new NVTASCIIReader(dataTransferInputStream,
-						pickCharset());
+				dataReader = new NVTASCIIReader(dataTransferInputStream, mlsdCommand ? "UTF-8" : pickCharset());
 				String line;
 				while ((line = dataReader.readLine()) != null) {
 					if (line.length() > 0) {
