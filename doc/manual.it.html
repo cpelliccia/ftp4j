@@ -162,14 +162,25 @@ client.changeDirectory(&quot;relative&quot;);</pre>
   <li>DOS</li>
   <li>NetWare</li>
   <li>EPLF</li>
+  <li>MLSD</li>
 </ul>
-<p>Tutto ci&ograve; viene fatto attraverso degli interpreti modulari. Il pacchetto <em>it.sauronsoftware.ftp4j.listparsers</em> contiene gli interpreti in grado di gestire i formati appena elencati. Il pi&ugrave; delle volte sono sufficienti.</p>
-<p>Per elencare il contenuto della directory di lavoro corrente:</p>
+<p>Tutto ci&ograve; viene fatto attraverso degli interpreti modulari. Il pacchetto <em>it.sauronsoftware.ftp4j.listparsers</em> contiene gli interpreti in grado di gestire i formati appena elencati. Il pi&ugrave; delle volte sono sufficienti.</p><p>Per elencare il contenuto della directory di lavoro corrente:</p>
 <pre>FTPFile[] list = client.list();</pre>
 <p>Se si riceve una <em>FTPListParseException</em> (<em>it.sauronsoftware.ftp4j.FTPListParseException</em>) significa che nessuno degli interpreti di ftp4j &egrave; riuscito a decodificare la risposta fornita dal server. Se dovesse capitare, si pu&ograve; provare ad usare il metodo alternativo <em>listNames()</em>, che per&ograve; restituisce molte meno informazioni rispetto a <em>list()</em>. A mali estremi, estremi rimedi: &egrave; possibile costruire un nuovo interprete in grado di gestire il particolare formato riscontrato, estendendo l'interfaccia <em>FTPListParser</em> (<em>it.sauronsoftware.ftp4j.FTPListParser</em>). L'istanza del nuovo interprete pu&ograve; essere aggiunta al client con il metodo <em>addListParser()</em>.</p>
 <p>Gli oggetti <em>FTPFile</em> (<em>it.sauronsoftware.ftp4j.FTPFile</em>) mantengono una rappresentazione dei contenuti della directory di lavoro, e sono usati per rappresentare i file, le sotto-directory ed i collegamenti. In base al tipo di risposta dato dal server alcune informazioni di un oggetto <em>FTPFile</em> possono essere assenti o impostate su valori di poco senso. Si faccia riferimento ai javadoc della libreria per maggiori dettagli.</p>
 <p>E' possibile filtrare i risultati restituiti dal metodo <em>list()</em>, come nel seguente esempio:</p>
 <pre>FTPFile[] list = client.list(&quot;*.jpg&quot;);</pre>
+<p>Se il server dichiara esplicitamente di supportare il comando MLSD, ftp4j lo usa al posto del comando LIST. Gli elenchi MLSD, infatti, sono standard e per questo permettono un'interpretazione pi&ugrave; accurata. Purtroppo non tutti i server supportano questo standard, ed alcuni lo supportano malamente. Si pu&ograve; controllare il comportamento di ftp4j rispetto all'uso del comando MLSD attraverso il metodo <em>setMLSDPolicy()</em> di <em>FTPClient</em>. I valori possibili sono:</p>
+<ul>
+  <li><p><em>FTPClient.MLSD_IF_SUPPORTED</em><br />
+  Usa il comando MLSD al posto di LIST solo se il server dichiara esplicitamente di supportarlo. Questo &egrave; il comportamento predefinito di ftp4j.</p></li>
+  <li><p><em>FTPClient.MLSD_ALWAYS</em><br />
+  Usa sempre il comando MLSD al posto di LIST, anche se il server non dichiara di supportarlo.</p></li>
+  <li><p><em>FTPClient.MLSD_NEVER</em><br />
+  Non usa mai il comando MLSD al posto di LIST, anche se il server dichiara di supportarlo.</p></li>
+</ul>
+<p>Ad esempio:</p>
+<code>client.setMLSDPolicy(FTPClient.MLSD_NEVER);</code>
 <a name="13"></a>
 <h2>Data di modifica di file, directory e collegamenti</h2>
 <p>Normalmente un oggetto <em>FTPFile</em> riporta la data di modifica dell'entit&agrave; rappresentata, ma come si &egrave; appena detto il dettaglio e la completezza della risposta dipendono dalla tipologia del server remoto. Quando l'informazione manca si pu&ograve; provare a recuperarla in questo modo:</p>

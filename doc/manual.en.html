@@ -178,6 +178,7 @@ client.changeDirectory(&quot;relative&quot;);</pre>
   <li>DOS style</li>
   <li>NetWare styles</li>
   <li>EPLF</li>
+  <li>MLSD</li>
 </ul>
 <p>This is done using pluggable parsers. The package <em>it.sauronsoftware.ftp4j.listparsers</em> 
   contains the ones handling the styles listed above. Most of the time this should 
@@ -199,6 +200,22 @@ client.changeDirectory(&quot;relative&quot;);</pre>
   for details.</p>
 <p>You can also use a file filter parameter with the <em>list()</em> method, i.e.:</p>
 <pre>FTPFile[] list = client.list(&quot;*.jpg&quot;);</pre>
+<p>If the connected server declares explicitly to support the special MLSD command, ftp4j will
+use it instead of the basic LIST command. MLSD responses, infact, are standard, accurated and
+more easily parsable. Unfortunately not all of the servers support this command, and some of
+them support it badly. For these reasons the developer can control whether ftp4j should use the
+MLSD command by calling the <em>setMLSDPolicy()</em> method of a <em>FTPClient</em> object.
+Admitted values are:</p>
+<ul>
+  <li><p><em>FTPClient.MLSD_IF_SUPPORTED</em><br />
+  The client will use the MLSD command (instead of LIST) only if the server declares explicitly its support. This is the default ftp4j behaviour.</p></li>
+  <li><p><em>FTPClient.MLSD_ALWAYS</em><br />
+  The client will always use the MLSD command (instead of LIST), also if it is not explicitly supported by the server.</p></li>
+  <li><p><em>FTPClient.MLSD_NEVER</em><br />
+  The client will never use the MLSD command (instead of LIST), also if it is explicitly supported by the server.</p></li>
+</ul>
+<p>For example:</p>
+<code>client.setMLSDPolicy(FTPClient.MLSD_NEVER);</code>
 <a name="13"></a>
 <h2>Getting the modification date of files and directories</h2>
 <p>Usually a <em>FTPFile</em> object tells you about the last modification date 

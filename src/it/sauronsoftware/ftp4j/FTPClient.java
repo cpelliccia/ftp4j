@@ -248,7 +248,7 @@ public class FTPClient {
 	 * {@link FTPClient#MLSD_NEVER} constants. Default value is
 	 * MLSD_IF_SUPPORTED.
 	 */
-	private int mlsdPolicy = MLSD_NEVER;// XXX MLSD_IF_SUPPORTED;
+	private int mlsdPolicy = MLSD_IF_SUPPORTED;
 
 	/**
 	 * A flag used to mark whether the connected server supports the resume of
@@ -324,7 +324,7 @@ public class FTPClient {
 	 */
 	public FTPClient() {
 		// The built-in parsers.
-		// XXX addListParser(new MLSDListParser());
+		addListParser(new MLSDListParser());
 		addListParser(new UnixListParser());
 		addListParser(new DOSListParser());
 		addListParser(new EPLFListParser());
