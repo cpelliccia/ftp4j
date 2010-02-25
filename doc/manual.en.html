@@ -354,6 +354,11 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <h2>NOOPing the server</h2>
 <p>Suppose your client is doing nothing since it's waiting for user input. Usually FTP servers disconnect automatically an inactive client. To avoid this timeout you can send now and then a NOOP command. This one does nothing but it points out to the server that the client is still alive, resetting  the timeout counter. Call:</p>
 <pre>client.noop();</pre>
+<p>Automatic NOOPs can also be issued by the client when an inactivity timeout occurs. By default this feature is disabled. It can be enabled by setting the timeout duration with the <em>setAutoNoopTimeout()</em> method, supplying a value expressed in milliseconds. For example:</p>
+<pre>client.setAutoNoopTimeout(30000);</pre>
+<p>With this value, the client will issue a NOOP command after 30 seconds of inactivity.</p>
+<p>The automatic NOOP timeout can be disabled again by using a value equal or less than zero:</p>
+<pre>client.setAutoNoopTimeout(0);</pre>
 <a name="18"></a>
 <h2>Site specific and custom commands</h2>
 <p>You can send site specific commands as follows:</p>

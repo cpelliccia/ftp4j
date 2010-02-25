@@ -63,12 +63,4 @@ interface FTPKeys {
 	 */
 	public String PASSIVE_DT_USE_SUGGESTED_ADDRESS = "ftp4j.passiveDataTransfer.useSuggestedAddress";
 
-	/**
-	 * The key used to retrieve the system property with the delay for a NOOP
-	 * operation performed automatically during long data transfers. The value
-	 * should be ms. The value 0 disable the auto NOOP feature. Default value is
-	 * 0.
-	 */
-	public String DT_AUTO_NOOP_DELAY = "ftp4j.dataTransfer.autoNOOPDelay";
-
 }

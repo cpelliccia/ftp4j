@@ -285,6 +285,11 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <p>Si immagini che il client &egrave; fermo senza fare nulla perch&eacute; in attesa di input da parte dell'utente. Pu&ograve; accadere che il server, non riscontrando alcuna attivit&agrave; per un periodo troppo lungo, chiuda la connessione con il client. Non appena il client tenter&agrave; un'operazione questa fallir&agrave;, poich&eacute; la linea di comunicazione &egrave; stata chiusa unilateralmente. Per evitare lo scadere del timeout di inattivit&agrave; &egrave; possibile inviare di tanto in tanto, durante i periodi di stasi, un comando NOOP al server. Questo genere di comando non esegue alcuna reale operazione, ed ha il solo effetto di far sapere al server che il client &egrave; ancora attivo.</p>
 <p>Con ftp4j &egrave; sufficiente chiamare:</p>
 <pre>client.noop();</pre>
+<p>Operazioni NOOP possono anche essere eseguite automaticamente dal client allo scadere di un certo periodo di inattivit&agrave;. Inizialmente questa caratteristica &egrave; disabilitata. La si pu&ograve; attivare invocando il metodo <em>setAutoNoopTimeout()</em>, attraverso il quale va impostata la durata del timeout di inattivit&agrave; con un valore espresso in millisecondi. Ad esempio:</p>
+<pre>client.setAutoNoopTimeout(30000);</pre>
+<p>In questa maniera, il client invia un comando NOOP al server dopo 30 secondi di inattivit&agrave;.</p>
+<p>L'invio automatico dei comandi NOOP pu&ograve; essere nuovamente disabilitato usando un valore minore o uguale a zero:</p>
+<pre>client.setAutoNoopTimeout(0);</pre>
 <a name="18"></a>
 <h2>Comandi del sito e personalizzati</h2>
 <p>Per inviare un comando specifico del sito:</p>

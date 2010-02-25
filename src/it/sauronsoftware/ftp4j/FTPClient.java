@@ -251,6 +251,26 @@ public class FTPClient {
 	private int mlsdPolicy = MLSD_IF_SUPPORTED;
 
 	/**
+	 * If this value is greater than 0, the auto-noop feature is enabled. If
+	 * positive, the field is used as a timeout value (expressed in
+	 * milliseconds). If autoNoopDelay milliseconds has passed without any
+	 * communication between the client and the server, a NOOP command is
+	 * automaticaly sent to the server by the client.
+	 */
+	private long autoNoopTimeout = 0;
+
+	/**
+	 * The auto noop timer thread.
+	 */
+	private AutoNoopTimer autoNoopTimer;
+
+	/**
+	 * The system time (in millis) of the moment when the next auto noop command
+	 * should be issued.
+	 */
+	private long nextAutoNoopTime;
+
+	/**
 	 * A flag used to mark whether the connected server supports the resume of
 	 * broken transfers.
 	 */
@@ -721,6 +741,55 @@ public class FTPClient {
 	}
 
 	/**
+	 * Enable and disable the auto-noop feature.
+	 * 
+	 * If the supplied value is greater than 0, the auto-noop feature is
+	 * enabled, otherwise it is disabled. If positive, the field is used as a
+	 * timeout value (expressed in milliseconds). If autoNoopDelay milliseconds
+	 * has passed without any communication between the client and the server, a
+	 * NOOP command is automaticaly sent to the server by the client.
+	 * 
+	 * The default value for the auto noop delay is 0 (disabled).
+	 * 
+	 * @param autoNoopTimeout
+	 *            The duration of the auto-noop timeout, in milliseconds. If 0
+	 *            or less, the auto-noop feature is disabled.
+	 * 
+	 * @since 1.5
+	 */
+	public void setAutoNoopTimeout(long autoNoopTimeout) {
+		synchronized (lock) {
+			if (connected && authenticated) {
+				stopAutoNoopTimer();
+			}
+			long oldValue = this.autoNoopTimeout;
+			long newValue = autoNoopTimeout;
+			this.autoNoopTimeout = autoNoopTimeout;
+			if (oldValue != 0 && newValue != 0 && nextAutoNoopTime > 0) {
+				nextAutoNoopTime = nextAutoNoopTime - (oldValue - newValue);
+			}
+			if (connected && authenticated) {
+				startAutoNoopTimer();
+			}
+		}
+	}
+
+	/**
+	 * Returns the duration of the auto-noop timeout, in milliseconds. If 0 or
+	 * less, the auto-noop feature is disabled.
+	 * 
+	 * @return The duration of the auto-noop timeout, in milliseconds. If 0 or
+	 *         less, the auto-noop feature is disabled.
+	 * 
+	 * @since 1.5
+	 */
+	public long getAutoNoopTimeout() {
+		synchronized (lock) {
+			return autoNoopTimeout;
+		}
+	}
+
+	/**
 	 * This method adds a FTPCommunicationListener to the object.
 	 * 
 	 * @param listener
@@ -762,8 +831,7 @@ public class FTPClient {
 			int size = communicationListeners.size();
 			FTPCommunicationListener[] ret = new FTPCommunicationListener[size];
 			for (int i = 0; i < size; i++) {
-				ret[i] = (FTPCommunicationListener) communicationListeners
-						.get(i);
+				ret[i] = (FTPCommunicationListener) communicationListeners.get(i);
 			}
 			return ret;
 		}
@@ -900,6 +968,7 @@ public class FTPClient {
 				this.password = null;
 				this.utf8Supported = false;
 				this.dataChannelEncrypted = false;
+				// Returns the welcome message.
 				return wm.getMessages();
 			} catch (IOException e) {
 				// D'oh!
@@ -948,6 +1017,11 @@ public class FTPClient {
 			if (!connected) {
 				throw new IllegalStateException("Client not connected");
 			}
+			// Stops the auto noop timer (if started).
+			if (authenticated) {
+				stopAutoNoopTimer();
+			}
+			// Send QUIT?
 			if (sendQuitCommand) {
 				// Call the QUIT command.
 				communication.sendFTPCommand("QUIT");
@@ -978,6 +1052,8 @@ public class FTPClient {
 		communication = null;
 		// Reset the connection flag.
 		connected = false;
+		// Stops the auto noop timer.
+		stopAutoNoopTimer();
 	}
 
 	/**
@@ -1120,6 +1196,8 @@ public class FTPClient {
 		}
 		// Post-login operations.
 		postLoginOperations();
+		// Starts the auto noop timer.
+		startAutoNoopTimer();
 	}
 
 	/**
@@ -1214,6 +1292,8 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			} else {
+				// Stops the auto noop timer.
+				stopAutoNoopTimer();
 				// Ok. Not authenticated, now.
 				authenticated = false;
 				username = null;
@@ -1251,6 +1331,8 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
+			// Resets auto noop timer.
+			touchAutoNoopTimer();
 		}
 	}
 
@@ -1277,8 +1359,11 @@ public class FTPClient {
 			if (!connected) {
 				throw new IllegalStateException("Client not connected");
 			}
-			// Send the command and return the reply.
+			// Sends the command.
 			communication.sendFTPCommand(command);
+			// Resets auto noop timer.
+			touchAutoNoopTimer();
+			// Returns the reply.
 			return communication.readFTPReply();
 		}
 	}
@@ -1304,8 +1389,11 @@ public class FTPClient {
 			if (!connected) {
 				throw new IllegalStateException("Client not connected");
 			}
-			// Send the command and return the reply.
+			// Sends the command.
 			communication.sendFTPCommand("SITE " + command);
+			// Resets auto noop timer.
+			touchAutoNoopTimer();
+			// Returns the reply.
 			return communication.readFTPReply();
 		}
 	}
@@ -1339,7 +1427,11 @@ public class FTPClient {
 			}
 			// Send the ACCT command.
 			communication.sendFTPCommand("ACCT " + account);
+			// Gets the reply.
 			FTPReply r = communication.readFTPReply();
+			// Resets auto noop timer.
+			touchAutoNoopTimer();
+			// Evaluates the response.
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1373,6 +1465,7 @@ public class FTPClient {
 			// Send the PWD command.
 			communication.sendFTPCommand("PWD");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1418,6 +1511,7 @@ public class FTPClient {
 			// Send the CWD command.
 			communication.sendFTPCommand("CWD " + path);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1447,9 +1541,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the CWD command.
+			// Sends the CWD command.
 			communication.sendFTPCommand("CDUP");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1483,9 +1578,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the MDTM command.
+			// Sends the MDTM command.
 			communication.sendFTPCommand("MDTM " + path);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1528,9 +1624,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the SIZE command.
+			// Sends the SIZE command.
 			communication.sendFTPCommand("SIZE " + path);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1586,15 +1683,17 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the RNFR command.
+			// Sends the RNFR command.
 			communication.sendFTPCommand("RNFR " + oldPath);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (r.getCode() != 350) {
 				throw new FTPException(r);
 			}
-			// Send the RNFR command.
+			// Sends the RNFR command.
 			communication.sendFTPCommand("RNTO " + newPath);
 			r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1626,9 +1725,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the DELE command.
+			// Sends the DELE command.
 			communication.sendFTPCommand("DELE " + path);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1660,9 +1760,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the RMD command.
+			// Sends the RMD command.
 			communication.sendFTPCommand("RMD " + path);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1695,9 +1796,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the MKD command.
+			// Sends the MKD command.
 			communication.sendFTPCommand("MKD " + directoryName);
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1729,9 +1831,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the HELP command.
+			// Sends the HELP command.
 			communication.sendFTPCommand("HELP");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1764,9 +1867,10 @@ public class FTPClient {
 			if (!authenticated) {
 				throw new IllegalStateException("Client not authenticated");
 			}
-			// Send the STAT command.
+			// Sends the STAT command.
 			communication.sendFTPCommand("STAT");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1836,6 +1940,7 @@ public class FTPClient {
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -1863,6 +1968,7 @@ public class FTPClient {
 					dtConnection = provider.openDataTransferConnection();
 				} finally {
 					r = communication.readFTPReply();
+					touchAutoNoopTimer();
 					if (r.getCode() != 150 && r.getCode() != 125) {
 						throw new FTPException(r);
 					}
@@ -2064,6 +2170,7 @@ public class FTPClient {
 			// ASCII, please!
 			communication.sendFTPCommand("TYPE A");
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -2387,6 +2494,7 @@ public class FTPClient {
 				communication.sendFTPCommand("TYPE I");
 			}
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -2394,6 +2502,7 @@ public class FTPClient {
 			if (restSupported || restartAt > 0) {
 				communication.sendFTPCommand("REST " + restartAt);
 				r = communication.readFTPReply();
+				touchAutoNoopTimer();
 				if (r.getCode() != 350) {
 					throw new FTPException(r);
 				}
@@ -2408,6 +2517,7 @@ public class FTPClient {
 					dtConnection = provider.openDataTransferConnection();
 				} finally {
 					r = communication.readFTPReply();
+					touchAutoNoopTimer();
 					if (r.getCode() != 150 && r.getCode() != 125) {
 						throw new FTPException(r);
 					}
@@ -2420,9 +2530,6 @@ public class FTPClient {
 				ongoingDataTransfer = true;
 				aborted = false;
 			}
-			// Prepare and start a NOOPer thread.
-			NOOPer nooper = new NOOPer();
-			nooper.start();
 			// Upload the stream.
 			long done = 0;
 			try {
@@ -2477,16 +2584,6 @@ public class FTPClient {
 					}
 				}
 			} finally {
-				// Stop nooping.
-				nooper.interrupt();
-				for (;;) {
-					try {
-						nooper.join();
-						break;
-					} catch (InterruptedException e) {
-						continue;
-					}
-				}
 				// Closing stream and data connection.
 				if (dataTransferOutputStream != null) {
 					try {
@@ -2764,6 +2861,7 @@ public class FTPClient {
 				communication.sendFTPCommand("TYPE I");
 			}
 			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
@@ -2771,6 +2869,7 @@ public class FTPClient {
 			if (restSupported || restartAt > 0) {
 				communication.sendFTPCommand("REST " + restartAt);
 				r = communication.readFTPReply();
+				touchAutoNoopTimer();
 				if (r.getCode() != 350) {
 					throw new FTPException(r);
 				}
@@ -2785,6 +2884,7 @@ public class FTPClient {
 					dtConnection = provider.openDataTransferConnection();
 				} finally {
 					r = communication.readFTPReply();
+					touchAutoNoopTimer();
 					if (r.getCode() != 150 && r.getCode() != 125) {
 						throw new FTPException(r);
 					}
@@ -2797,9 +2897,6 @@ public class FTPClient {
 				ongoingDataTransfer = true;
 				aborted = false;
 			}
-			// Prepare and start a NOOP thread.
-			NOOPer nooper = new NOOPer();
-			nooper.start();
 			// Download the stream.
 			try {
 				// Opens the data transfer connection.
@@ -2849,16 +2946,6 @@ public class FTPClient {
 					}
 				}
 			} finally {
-				// Stop nooping.
-				nooper.interrupt();
-				for (;;) {
-					try {
-						nooper.join();
-						break;
-					} catch (InterruptedException e) {
-						continue;
-					}
-				}
 				// Closing stream and data connection.
 				if (dataTransferInputStream != null) {
 					try {
@@ -2953,9 +3040,10 @@ public class FTPClient {
 		int p2 = port & 0xff;
 		int[] addr = pickLocalAddress();
 		// Send the port command.
-		communication.sendFTPCommand("PORT " + addr[0] + "," + addr[1] + ","
-				+ addr[2] + "," + addr[3] + "," + p1 + "," + p2);
+		communication.sendFTPCommand("PORT " + addr[0] + "," + addr[1] + "," + addr[2] + "," +
+				addr[3] + "," + p1 + "," + p2);
 		FTPReply r = communication.readFTPReply();
+		touchAutoNoopTimer();
 		if (!r.isSuccessCode()) {
 			// Disposes.
 			server.dispose();
@@ -2982,6 +3070,7 @@ public class FTPClient {
 		communication.sendFTPCommand("PASV");
 		// Read the reply.
 		FTPReply r = communication.readFTPReply();
+		touchAutoNoopTimer();
 		if (!r.isSuccessCode()) {
 			throw new FTPException(r);
 		}
@@ -3070,6 +3159,7 @@ public class FTPClient {
 				if (sendAborCommand) {
 					communication.sendFTPCommand("ABOR");
 					communication.readFTPReply();
+					touchAutoNoopTimer();
 				}
 				if (dataTransferInputStream != null) {
 					try {
@@ -3273,33 +3363,64 @@ public class FTPClient {
 	}
 
 	/**
-	 * A NOOPer thread used during long data trasnfers.
+	 * Starts the auto-noop timer thread.
 	 */
-	private class NOOPer extends Thread {
+	private void startAutoNoopTimer() {
+		if (autoNoopTimeout > 0) {
+			autoNoopTimer = new AutoNoopTimer();
+			autoNoopTimer.start();
+		}
+	}
+
+	/**
+	 * Stops the auto-noop timer thread.
+	 * 
+	 * @since 1.5
+	 */
+	private void stopAutoNoopTimer() {
+		if (autoNoopTimer != null) {
+			autoNoopTimer.interrupt();
+			autoNoopTimer = null;
+		}
+	}
+
+	/**
+	 * Resets the auto noop timer.
+	 */
+	private void touchAutoNoopTimer() {
+		if (autoNoopTimer != null) {
+			nextAutoNoopTime = System.currentTimeMillis() + autoNoopTimeout;
+		}
+	}
+
+	/**
+	 * The auto noop timer thread.
+	 */
+	private class AutoNoopTimer extends Thread {
 
 		public void run() {
-			long delay;
-			try {
-				String aux = System
-						.getProperty(FTPKeys.DT_AUTO_NOOP_DELAY, "0");
-				delay = Long.parseLong(aux);
-			} catch (NumberFormatException e) {
-				delay = 0;
-			}
-			if (delay > 0) {
-				while (!Thread.interrupted()) {
-					// Sleep.
-					try {
-						Thread.sleep(delay);
-					} catch (InterruptedException e) {
-						break;
+			synchronized (lock) {
+				if (nextAutoNoopTime <= 0 && autoNoopTimeout > 0) {
+					nextAutoNoopTime = System.currentTimeMillis() + autoNoopTimeout;
+				}
+				while (!Thread.interrupted() && autoNoopTimeout > 0) {
+					// Sleep till the next NOOP.
+					long delay = nextAutoNoopTime - System.currentTimeMillis();
+					if (delay > 0) {
+						try {
+							lock.wait(delay);
+						} catch (InterruptedException e) {
+							break;
+						}
 					}
-					// Send NOOP.
-					try {
-						communication.sendFTPCommand("NOOP");
-						communication.readFTPReply();
-					} catch (Throwable t) {
-						;
+					// Is it really time to NOOP?
+					if (System.currentTimeMillis() >= nextAutoNoopTime) {
+						// Yes!
+						try {
+							noop();
+						} catch (Throwable t) {
+							; // ignore...
+						}
 					}
 				}
 			}
