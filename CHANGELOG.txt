@@ -10,10 +10,13 @@ Version 1.5 - TBD
   reported NAT problems. However, the old behaviour can be
   restored, by setting to true the value of the system property
   called ftp4j.passiveDataTransfer.useSuggestedAddress.
+- The HTTPTunnelConnector has been improved, and now it is
+  fully HTTP 1.1 compliant.
 - A date parsing bug was fixed in UnixListParser and 
   NetWareListParser components.
 
-(Thanks to Liu Yan, Roberto Bellandi and Alessandro Brunelli)
+(Thanks to Liu Yan, Steven Luke, Roberto Bellandi and
+           Alessandro Brunelli)
 
 
 Version 1.4.3 - 2009/07/14

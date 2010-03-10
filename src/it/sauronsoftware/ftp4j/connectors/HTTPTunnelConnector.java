@@ -93,6 +93,7 @@ public class HTTPTunnelConnector implements FTPConnector {
 		byte[] CRLF = "\r\n".getBytes("UTF-8");
 		// The connect command line.
 		String connect = "CONNECT " + host + ":" + port + " HTTP/1.1";
+		String hostHeader = "Host: " + host + ":" + port;
 		// A connection status flag.
 		boolean connected = false;
 		// The socket for the connection with the proxy.
@@ -107,11 +108,14 @@ public class HTTPTunnelConnector implements FTPConnector {
 			// Send the CONNECT request.
 			out.write(connect.getBytes("UTF-8"));
 			out.write(CRLF);
+			out.write(hostHeader.getBytes("UTF-8"));
+			out.write(CRLF);
 			// Auth headers
 			if (proxyUser != null && proxyPass != null) {
 				String header = "Proxy-Authorization: Basic "
-						+ Base64.encode(proxyUser + ":" + proxyPass) + "\r\n";
+						+ Base64.encode(proxyUser + ":" + proxyPass);
 				out.write(header.getBytes("UTF-8"));
+				out.write(CRLF);
 			}
 			out.write(CRLF);
 			// Get the proxy response.
