@@ -1,6 +1,7 @@
 Version 1.5 - TBD
 
 - MLSD command support added.
+- MODE Z support added.
 - Automatic NOOP on inactivity timeout added.
 - The library behaviour for passive data transfers has been
   changed. The client trusts no longer the IP address returned

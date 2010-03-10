@@ -23,9 +23,10 @@
   <li><a href="#14">Downloading and uploading files</a></li>
   <li><a href="#15">Active and passive data transfer modes</a></li>
   <li><a href="#16">Binary and textual data transfer types</a></li>
-  <li><a href="#17">NOOPing the server</a></li>
-  <li><a href="#18">Site specific and custom commands</a></li>
-  <li><a href="#19">Exceptions handling</a></li>
+  <li><a href="#17">Data transfer compression</a></li>
+  <li><a href="#18">NOOPing the server</a></li>
+  <li><a href="#19">Site specific and custom commands</a></li>
+  <li><a href="#20">Exceptions handling</a></li>
 </ul>
 <a name="1"></a>
 <h2>Requirements</h2>
@@ -351,6 +352,19 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <p>You can build your own  recognizer implementing the <em>FTPTextualExtensionRecognizer</em> interface, but maybe you'll like more to instance the convenience class <em>ParametricTextualExtensionRecognizer</em> (<em>it.sauronsoftware.ftp4j.recognizers.ParametricTextualExtensionRecognizer</em>). Anyway, don't forget to plug your recognizer in the client:</p>
 <pre>client.setTextualExtensionRecognizer(myRecognizer);</pre>
 <a name="17"></a>
+<h2>Data transfer compression</h2>
+<p>Some servers support a data transfer compression feature called MODE Z. This feature is useful to save bandwidth on large file transfers. Once the client is connected to the server and authenticated, the compression support can be checked by calling:</p>
+<code>boolean compressionSupported = client.isCompressionSupported();</code>
+<p>If compression is supported on the server-side, it can be enabled by calling:</p>
+<code>client.setCompressionEnabled(true);</code>
+<p>After this call, any subsequent data transfer (downloads, uploads and list operations) will be compressed, saving bandwidth.</p>
+<p>Data transfer compression can be disabled again by calling:</p>
+<code>client.setCompressionEnabled(false);</code>
+<p>The flag value can also be checked:</p>
+<code>boolean compressionEnabled = client.isCompressionEnabled();</code>
+<p>Please note that compressed data transfer will take place only if compression is both supported and enabled.</p>
+<p>By default, compression is disabled, even if supported by the server. If required, it has to be explicitly turned on.</p>
+<a name="18"></a>
 <h2>NOOPing the server</h2>
 <p>Suppose your client is doing nothing since it's waiting for user input. Usually FTP servers disconnect automatically an inactive client. To avoid this timeout you can send now and then a NOOP command. This one does nothing but it points out to the server that the client is still alive, resetting  the timeout counter. Call:</p>
 <pre>client.noop();</pre>
@@ -359,14 +373,14 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <p>With this value, the client will issue a NOOP command after 30 seconds of inactivity.</p>
 <p>The automatic NOOP timeout can be disabled again by using a value equal or less than zero:</p>
 <pre>client.setAutoNoopTimeout(0);</pre>
-<a name="18"></a>
+<a name="19"></a>
 <h2>Site specific and custom commands</h2>
 <p>You can send site specific commands as follows:</p>
 <pre>FTPReply reply = client.sendSiteCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>You can also sends custom commands:</p>
 <pre>FTPReply reply = client.sendCustomCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>Both <em>sendSiteCommand()</em> and <em>sendCustomCommand()</em> return a <em>FTPReply</em> (<em>it.sauronsoftware.ftp4j.FTPReply</em>) object. With this one you can check the response received, getting the server reply code and message. The <em>FTPCodes </em>(<em>it.sauronsoftware.ftp4j.FTPCodes</em>) interface reports some common FTP reply codes, so you can try to match your reply code with one of those the library knows for sure.</p>
-<a name="19"></a>
+<a name="20"></a>
 <h2>Exceptions handling</h2>
 <p>The ftp4j library defines five kinds of exception:</p>
 <ul>

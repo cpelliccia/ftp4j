@@ -49,6 +49,8 @@ import java.util.Iterator;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.InflaterInputStream;
 
 import javax.net.ssl.SSLSocketFactory;
 
@@ -182,8 +184,7 @@ public class FTPClient {
 	/**
 	 * The textual extension recognizer used by the client.
 	 */
-	private FTPTextualExtensionRecognizer textualExtensionRecognizer = DefaultTextualExtensionRecognizer
-			.getInstance();
+	private FTPTextualExtensionRecognizer textualExtensionRecognizer = DefaultTextualExtensionRecognizer.getInstance();
 
 	/**
 	 * The FTPListParser used successfully during previous connection-scope list
@@ -285,6 +286,13 @@ public class FTPClient {
 	private String charset = null;
 
 	/**
+	 * This flag enables and disables the use of compression (ZLIB) during data
+	 * transfers. Compression is enabled when both this flag is true and the
+	 * server supports compressed transfers.
+	 */
+	private boolean compressionEnabled = false;
+
+	/**
 	 * A flag used to mark whether the connected server supports UTF-8 pathnames
 	 * encoding.
 	 */
@@ -295,6 +303,17 @@ public class FTPClient {
 	 * command (RFC 3659).
 	 */
 	private boolean mlsdSupported = false;
+
+	/**
+	 * A flag used to mark whether the connected server supports the MODE Z
+	 * command.
+	 */
+	private boolean modezSupported = false;
+
+	/**
+	 * A flag used to mark whether MODE Z is enabled.
+	 */
+	private boolean modezEnabled = false;
 
 	/**
 	 * This flag indicates whether the data channel is encrypted.
@@ -430,8 +449,7 @@ public class FTPClient {
 	 */
 	public void setSecurity(int security) throws IllegalStateException,
 			IllegalArgumentException {
-		if (security != SECURITY_FTP && security != SECURITY_FTPS
-				&& security != SECURITY_FTPES) {
+		if (security != SECURITY_FTP && security != SECURITY_FTPS && security != SECURITY_FTPES) {
 			throw new IllegalArgumentException("Invalid security");
 		}
 		synchronized (lock) {
@@ -627,6 +645,60 @@ public class FTPClient {
 	}
 
 	/**
+	 * Checks whether the connected remote FTP server supports compressed data
+	 * transfers (uploads, downloads, list operations etc.). If so, the
+	 * compression of any subsequent data transfer (upload, download, list etc.)
+	 * can be compressed, saving bandwidth. To enable compression call
+	 * {@link FTPClient#setCompressionEnabled(boolean)} .
+	 * 
+	 * The returned value is not significant if the client is not connected and
+	 * authenticated.
+	 * 
+	 * @return <em>true</em> if compression of data transfers is supported on
+	 *         the server-side, <em>false</em> otherwise.
+	 * @see FTPClient#isCompressionEnabled()
+	 * @since 1.5
+	 */
+	public boolean isCompressionSupported() {
+		return modezSupported;
+	}
+
+	/**
+	 * Enables or disables the use of compression during any subsequent data
+	 * transfer. Compression is enabled when both the supplied value and the
+	 * {@link FTPClient#isCompressionSupported()}) returned value are
+	 * <em>true</em>.
+	 * 
+	 * The default value is <em>false</em>.
+	 * 
+	 * @param compressionEnabled
+	 *            <em>true</em> to enable the use of compression during any
+	 *            subsequent file transfer, <em>false</em> to disable the
+	 *            feature.
+	 * @see FTPClient#isCompressionSupported()
+	 * @since 1.5
+	 */
+	public void setCompressionEnabled(boolean compressionEnabled) {
+		this.compressionEnabled = compressionEnabled;
+	}
+
+	/**
+	 * Checks whether the use of compression is enabled on the client-side.
+	 * 
+	 * Please note that compressed transfers are actually enabled only if both
+	 * this method and {@link FTPClient#isCompressionSupported()} return
+	 * <em>true</em>.
+	 * 
+	 * @return <em>true</em> if compression is enabled, <em>false</em>
+	 *         otherwise.
+	 * @see FTPClient#isCompressionSupported()
+	 * @since 1.5
+	 */
+	public boolean isCompressionEnabled() {
+		return compressionEnabled;
+	}
+
+	/**
 	 * This method returns the textual extension recognizer used by the client.
 	 * 
 	 * Default one is {@link DefaultTextualExtensionRecognizer}.
@@ -655,8 +727,7 @@ public class FTPClient {
 	 * @see DefaultTextualExtensionRecognizer
 	 * @see ParametricTextualExtensionRecognizer
 	 */
-	public void setTextualExtensionRecognizer(
-			FTPTextualExtensionRecognizer textualExtensionRecognizer) {
+	public void setTextualExtensionRecognizer(FTPTextualExtensionRecognizer textualExtensionRecognizer) {
 		synchronized (lock) {
 			this.textualExtensionRecognizer = textualExtensionRecognizer;
 		}
@@ -937,19 +1008,14 @@ public class FTPClient {
 			Socket connection = null;
 			try {
 				// Open the connection.
-				connection = connector.connectForCommunicationChannel(host,
-						port);
+				connection = connector.connectForCommunicationChannel(host, port);
 				if (security == SECURITY_FTPS) {
 					connection = ssl(connection, host, port);
 				}
 				// Open the communication channel.
-				communication = new FTPCommunicationChannel(connection,
-						pickCharset());
-				for (Iterator i = communicationListeners.iterator(); i
-						.hasNext();) {
-					communication
-							.addCommunicationListener((FTPCommunicationListener) i
-							.next());
+				communication = new FTPCommunicationChannel(connection, pickCharset());
+				for (Iterator i = communicationListeners.iterator(); i.hasNext();) {
+					communication.addCommunicationListener((FTPCommunicationListener) i.next());
 				}
 				// Welcome message.
 				FTPReply wm = communication.readFTPReply();
@@ -1223,7 +1289,7 @@ public class FTPClient {
 			if (r.getCode() == 211) {
 				String[] lines = r.getMessages();
 				for (int i = 1; i < lines.length - 1; i++) {
-					String feat = lines[i].trim();
+					String feat = lines[i].trim().toUpperCase();
 					// REST STREAM supported?
 					if ("REST STREAM".equalsIgnoreCase(feat)) {
 						restSupported = true;
@@ -1238,6 +1304,11 @@ public class FTPClient {
 					// MLSD supported?
 					if ("MLSD".equalsIgnoreCase(feat)) {
 						mlsdSupported = true;
+						continue;
+					}
+					// MODE Z supported?
+					if ("MODE Z".equalsIgnoreCase(feat) || feat.startsWith("MODE Z ")) {
+						modezSupported = true;
 						continue;
 					}
 				}
@@ -1987,6 +2058,10 @@ public class FTPClient {
 			try {
 				// Opens the data transfer connection.
 				dataTransferInputStream = dtConnection.getInputStream();
+				// MODE Z enabled?
+				if (modezEnabled) {
+					dataTransferInputStream = new InflaterInputStream(dataTransferInputStream);
+				}
 				// Let's do it!
 				dataReader = new NVTASCIIReader(dataTransferInputStream, mlsdCommand ? "UTF-8" : pickCharset());
 				String line;
@@ -2113,9 +2188,8 @@ public class FTPClient {
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
 	 * @see FTPClient#listNames()
 	 */
-	public FTPFile[] list() throws IllegalStateException, IOException,
-			FTPIllegalReplyException, FTPException, FTPDataTransferException,
-			FTPAbortedException, FTPListParseException {
+	public FTPFile[] list() throws IllegalStateException, IOException, FTPIllegalReplyException, FTPException,
+			FTPDataTransferException, FTPAbortedException, FTPListParseException {
 		return list(null);
 	}
 
@@ -2155,9 +2229,8 @@ public class FTPClient {
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
 	 * @see FTPClient#list()
 	 */
-	public String[] listNames() throws IllegalStateException, IOException,
-			FTPIllegalReplyException, FTPException, FTPDataTransferException,
-			FTPAbortedException, FTPListParseException {
+	public String[] listNames() throws IllegalStateException, IOException, FTPIllegalReplyException, FTPException,
+			FTPDataTransferException, FTPAbortedException, FTPListParseException {
 		synchronized (lock) {
 			// Is this client connected?
 			if (!connected) {
@@ -2202,6 +2275,10 @@ public class FTPClient {
 			try {
 				// Opens the data transfer connection.
 				dataTransferInputStream = dtConnection.getInputStream();
+				// MODE Z enabled?
+				if (modezEnabled) {
+					dataTransferInputStream = new InflaterInputStream(dataTransferInputStream);
+				}
 				// Let's do it!
 				dataReader = new NVTASCIIReader(dataTransferInputStream,
 						pickCharset());
@@ -2537,6 +2614,10 @@ public class FTPClient {
 				inputStream.skip(streamOffset);
 				// Opens the data transfer connection.
 				dataTransferOutputStream = dtConnection.getOutputStream();
+				// MODE Z enabled?
+				if (modezEnabled) {
+					dataTransferOutputStream = new DeflaterOutputStream(dataTransferOutputStream);
+				}
 				// Listeners.
 				if (listener != null) {
 					listener.started();
@@ -2901,6 +2982,10 @@ public class FTPClient {
 			try {
 				// Opens the data transfer connection.
 				dataTransferInputStream = dtConnection.getInputStream();
+				// MODE Z enabled?
+				if (modezEnabled) {
+					dataTransferInputStream = new InflaterInputStream(dataTransferInputStream);
+				}
 				// Listeners.
 				if (listener != null) {
 					listener.started();
@@ -3001,6 +3086,28 @@ public class FTPClient {
 	private FTPDataTransferConnectionProvider openDataTransferChannel()
 			throws IOException, FTPIllegalReplyException, FTPException,
 			FTPDataTransferException {
+		// MODE Z?
+		if (modezSupported && compressionEnabled) {
+			if (!modezEnabled) {
+				// Sends the MODE Z command.
+				communication.sendFTPCommand("MODE Z");
+				FTPReply r = communication.readFTPReply();
+				touchAutoNoopTimer();
+				if (r.isSuccessCode()) {
+					modezEnabled = true;
+				}
+			}
+		} else {
+			if (modezEnabled) {
+				// Sends the MODE S command.
+				communication.sendFTPCommand("MODE S");
+				FTPReply r = communication.readFTPReply();
+				touchAutoNoopTimer();
+				if (r.isSuccessCode()) {
+					modezEnabled = false;
+				}
+			}
+		}
 		// Active or passive?
 		if (passive) {
 			return openPassiveDataTransferChannel();
@@ -3117,14 +3224,12 @@ public class FTPClient {
 				Socket dtConnection;
 				String remoteHost = remoteAddress.getHostAddress();
 				try {
-					dtConnection = connector.connectForDataTransferChannel(
-							remoteHost, remotePort);
+					dtConnection = connector.connectForDataTransferChannel(remoteHost, remotePort);
 					if (dataChannelEncrypted) {
 						dtConnection = ssl(dtConnection, remoteHost, remotePort);
 					}
 				} catch (IOException e) {
-					throw new FTPDataTransferException(
-							"Cannot connect to the remote server", e);
+					throw new FTPDataTransferException("Cannot connect to the remote server", e);
 				}
 				return dtConnection;
 			}

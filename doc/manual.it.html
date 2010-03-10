@@ -23,9 +23,10 @@
   <li><a href="#14">Download e upload dei file</a></li>
   <li><a href="#15">Trasferimenti attivi e passivi</a></li>
   <li><a href="#16">Trasferimenti binari e testuali</a></li>
-  <li><a href="#17">Il comando NOOP</a></li>
-  <li><a href="#18">Comandi del sito e personalizzati</a></li>
-  <li><a href="#19">Gestione delle eccezioni</a></li>
+  <li><a href="#17">Compressione dei trasferimenti</a></li>
+  <li><a href="#18">Il comando NOOP</a></li>
+  <li><a href="#19">Comandi del sito e personalizzati</a></li>
+  <li><a href="#20">Gestione delle eccezioni</a></li>
 </ul>
 <a name="1"></a>
 <h2>Requisiti</h2>
@@ -281,6 +282,20 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <p>E' possibile costruire altri riconoscitori, implementando l'interfaccia <em>FTPTextualExtensionRecognizer</em>, ma &egrave; molto pi&ugrave; conveniente istanziare la classe <em>ParametricTextualExtensionRecognizer</em> (<em>it.sauronsoftware.ftp4j.recognizers.ParametricTextualExtensionRecognizer</em>), che permette al programmatore di specificare liberamente la lista delle estensioni da riconoscere come testuali. In ogni caso un'istanza del riconoscitore va poi registrata presso il client:</p>
 <pre>client.setTextualExtensionRecognizer(myRecognizer);</pre>
 <a name="17"></a>
+<h2>Compressione dei trasferimenti</h2>
+<p>Alcuni server supportano la compressione dei trasferimenti attraverso una funzionalit&agrave; chiamata MODE Z. Questa funzionalit&agrave; fa risparmiare tempo e banda quando si scambiano file molto grandi e non compressi all'origine. Dopo che il client si &egrave; connesso ed autenticato, si pu&ograve; verificare se il server supporta la compressione chiamando:</p>
+<code>boolean compressionSupported = client.isCompressionSupported();</code>
+<p>Se la compressione &egrave; supportata, la si pu&ograve; abilitare:</p>
+<code>client.setCompressionEnabled(true);</code>
+<p>Tutti i trasferimenti successivi a questa chiamata (download, upload e operazioni di scansione delle directory) saranno compressi, risparmiando banda.</p>
+<p>In qualsiasi momento la compressione pu&ograve; essere nuovamente disabilitata, chiamando:</p>
+<code>client.setCompressionEnabled(false);</code>
+<p>Per controllare se la compressione &egrave; abilitata &egrave; possibile fare cos&igrave;:</p>
+<code>boolean compressionEnabled = client.isCompressionEnabled();</code>
+<p>Attenzione: i trasferimenti saranno realmente compressi se e solo se la compressione &egrave; sia abilitata sia supportata dal server. Se la compressione &egrave; abilitata, ma non supportata dal server, i trasferimenti avranno luogo in maniera non compressa.</p>
+<p>Please note that compressed data transfer will take place only if compression is both supported and enabled.</p>
+<p>Di default la compressione non &egrave; abilitata, anche quando il server dichiara di supportarla. Se si vuole usare la compressione, quindi, bisogna sempre attivarla esplicitamente.</p>
+<a name="18"></a>
 <h2>Il comando NOOP</h2>
 <p>Si immagini che il client &egrave; fermo senza fare nulla perch&eacute; in attesa di input da parte dell'utente. Pu&ograve; accadere che il server, non riscontrando alcuna attivit&agrave; per un periodo troppo lungo, chiuda la connessione con il client. Non appena il client tenter&agrave; un'operazione questa fallir&agrave;, poich&eacute; la linea di comunicazione &egrave; stata chiusa unilateralmente. Per evitare lo scadere del timeout di inattivit&agrave; &egrave; possibile inviare di tanto in tanto, durante i periodi di stasi, un comando NOOP al server. Questo genere di comando non esegue alcuna reale operazione, ed ha il solo effetto di far sapere al server che il client &egrave; ancora attivo.</p>
 <p>Con ftp4j &egrave; sufficiente chiamare:</p>
@@ -290,14 +305,14 @@ System.setProperty(&quot;ftp4j.activeDataTransfer.acceptTimeout&quot;, &quot;500
 <p>In questa maniera, il client invia un comando NOOP al server dopo 30 secondi di inattivit&agrave;.</p>
 <p>L'invio automatico dei comandi NOOP pu&ograve; essere nuovamente disabilitato usando un valore minore o uguale a zero:</p>
 <pre>client.setAutoNoopTimeout(0);</pre>
-<a name="18"></a>
+<a name="19"></a>
 <h2>Comandi del sito e personalizzati</h2>
 <p>Per inviare un comando specifico del sito:</p>
 <pre>FTPReply reply = client.sendSiteCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>Per inviare comandi personalizzati:</p>
 <pre>FTPReply reply = client.sendCustomCommand(&quot;YOUR COMMAND&quot;);</pre>
 <p>Sia <em>sendSiteCommand()</em> che <em>sendCustomCommand()</em> restituiscono un oggetto <em>FTPReply</em> (<em>it.sauronsoftware.ftp4j.FTPReply</em>). Attraverso questo oggetto &egrave; possibile controllare la risposta ricevuta, recuperando il codice ed il messaggio che la costituiscono. L'interfaccia <em>FTPCodes </em>(<em>it.sauronsoftware.ftp4j.FTPCodes</em>) riporta i codici comuni delle risposte FTP, cos&igrave; che &egrave; possibile andare a raffrontare il codice di una <em>FTPReply</em> senza dover consultare le specifiche FTP.</p>
-<a name="19"></a>
+<a name="20"></a>
 <h2>Gestione delle eccezioni</h2>
 <p>La libreria ftp4j definisce cinque tipi di eccezione:</p>
 <ul>
