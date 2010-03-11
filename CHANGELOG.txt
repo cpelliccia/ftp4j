@@ -1,4 +1,4 @@
-Version 1.5 - TBD
+Version 1.5 - 2010/03/11
 
 - MLSD command support added.
 - MODE Z support added.
