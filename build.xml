@@ -15,7 +15,7 @@
 	<target name="bin">
 		<delete dir="${ftp4j.dirs.bin}" />
 		<mkdir dir="${ftp4j.dirs.bin}" />
-		<javac srcdir="${ftp4j.dirs.src}" destdir="${ftp4j.dirs.bin}" includes="it/sauronsoftware/ftp4j/**" source="1.4" target="1.4" />
+		<javac srcdir="${ftp4j.dirs.src}" destdir="${ftp4j.dirs.bin}" includes="it/sauronsoftware/ftp4j/**" source="1.4" target="1.4" debug="true" />
 		<copy todir="${ftp4j.dirs.bin}">
 			<fileset dir="${ftp4j.dirs.src}">
 				<exclude name="**/*.java" />
