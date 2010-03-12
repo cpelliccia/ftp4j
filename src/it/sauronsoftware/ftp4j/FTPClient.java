@@ -89,7 +89,7 @@ public class FTPClient {
 	public static final int SECURITY_FTPS = 1;
 
 	/**
-	 * The constant for the FTPSS (FTP over explicit TLS/SSL) security level.
+	 * The constant for the FTPES (FTP over explicit TLS/SSL) security level.
 	 * 
 	 * @since 1.4
 	 */

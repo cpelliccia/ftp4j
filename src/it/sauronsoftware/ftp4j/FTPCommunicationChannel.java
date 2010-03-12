@@ -253,8 +253,7 @@ public class FTPCommunicationChannel {
 	public void ssl(SSLSocketFactory sslSocketFactory) throws IOException {
 		String host = connection.getInetAddress().getHostName();
 		int port = connection.getPort();
-		connection = sslSocketFactory
-				.createSocket(connection, host, port, true);
+		connection = sslSocketFactory.createSocket(connection, host, port, true);
 		InputStream inStream = connection.getInputStream();
 		OutputStream outStream = connection.getOutputStream();
 		reader = new NVTASCIIReader(inStream, charsetName);
