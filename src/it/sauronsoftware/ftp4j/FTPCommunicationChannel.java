@@ -182,7 +182,13 @@ public class FTPCommunicationChannel {
 		int code = 0;
 		ArrayList messages = new ArrayList();
 		do {
-			String statement = read();
+			String statement;
+			do {
+				statement = read();
+			} while (statement.trim().length() == 0);
+			if (statement.startsWith("\n")) {
+				statement = statement.substring(1);
+			}
 			int l = statement.length();
 			if (code == 0 && l < 3) {
 				throw new FTPIllegalReplyException();
@@ -203,16 +209,22 @@ public class FTPCommunicationChannel {
 			if (code == 0) {
 				code = aux;
 			}
-			if (aux > 0 && l > 3) {
-				char s = statement.charAt(3);
-				String message = statement.substring(4, l);
-				messages.add(message);
-				if (s == ' ') {
+			if (aux > 0) {
+				if (l > 3) {
+					char s = statement.charAt(3);
+					String message = statement.substring(4, l);
+					messages.add(message);
+					if (s == ' ') {
+						break;
+					} else if (s == '-') {
+						continue;
+					} else {
+						throw new FTPIllegalReplyException();
+					}
+				} else if (l == 3) {
 					break;
-				} else if (s == '-') {
-					continue;
 				} else {
-					throw new FTPIllegalReplyException();
+					messages.add(statement);
 				}
 			} else {
 				messages.add(statement);

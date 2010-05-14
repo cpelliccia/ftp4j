@@ -112,7 +112,7 @@ class NVTASCIIReader extends Reader {
 			}
 			previous = current;
 			current = i;
-			if (previous == '\r' && current == '\n') {
+			if (/* previous == '\r' && */current == '\n') {
 				// End of line.
 				return buffer.toString();
 			} else if (previous == '\r' && current == 0) {
