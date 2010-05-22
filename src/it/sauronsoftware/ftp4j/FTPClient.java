@@ -456,7 +456,7 @@ public class FTPClient {
 			if (connected) {
 				throw new IllegalStateException(
 						"The security level of the connection can't be "
-						+ "changed while the client is connected");
+								+ "changed while the client is connected");
 			}
 			this.security = security;
 		}
@@ -641,6 +641,19 @@ public class FTPClient {
 					e.printStackTrace();
 				}
 			}
+		}
+	}
+
+	/**
+	 * Checks whether the connected server explicitly supports resuming of
+	 * broken data transfers.
+	 * 
+	 * @return true if the server supports resuming, false otherwise.
+	 * @since 1.5.1
+	 */
+	public boolean isResumeSupported() {
+		synchronized (lock) {
+			return restSupported;
 		}
 	}
 
@@ -2414,7 +2427,9 @@ public class FTPClient {
 	 * @param file
 	 *            The file to upload.
 	 * @param restartAt
-	 *            The restart point (number of bytes already uploaded).
+	 *            The restart point (number of bytes already uploaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @throws IllegalStateException
 	 *             If the client is not connected or not authenticated.
 	 * @throws FileNotFoundException
@@ -2451,7 +2466,9 @@ public class FTPClient {
 	 * @param file
 	 *            The file to upload.
 	 * @param restartAt
-	 *            The restart point (number of bytes already uploaded).
+	 *            The restart point (number of bytes already uploaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @param listener
 	 *            The listener for the operation. Could be null.
 	 * @throws IllegalStateException
@@ -2524,7 +2541,9 @@ public class FTPClient {
 	 * @param inputStream
 	 *            The source of data.
 	 * @param restartAt
-	 *            The restart point (number of bytes already uploaded).
+	 *            The restart point (number of bytes already uploaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @param streamOffset
 	 *            The offset to skip in the stream.
 	 * @param listener
@@ -2575,17 +2594,25 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
-			// REST command (if supported and/or requested).
-			if (restSupported || restartAt > 0) {
-				communication.sendFTPCommand("REST " + restartAt);
-				r = communication.readFTPReply();
-				touchAutoNoopTimer();
-				if (r.getCode() != 350) {
-					throw new FTPException(r);
-				}
-			}
 			// Prepares the connection for the data transfer.
 			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
+			// REST command (if supported and/or requested).
+			if (restSupported || restartAt > 0) {
+				boolean done = false;
+				try {
+					communication.sendFTPCommand("REST " + restartAt);
+					r = communication.readFTPReply();
+					touchAutoNoopTimer();
+					if (r.getCode() != 350) {
+						throw new FTPException(r);
+					}
+					done = true;
+				} finally {
+					if (!done) {
+						provider.dispose();
+					}
+				}
+			}
 			// Send the STOR command.
 			communication.sendFTPCommand("STOR " + fileName);
 			Socket dtConnection;
@@ -2786,7 +2813,9 @@ public class FTPClient {
 	 * @param localFile
 	 *            The local file.
 	 * @param restartAt
-	 *            The restart point (number of bytes already downloaded).
+	 *            The restart point (number of bytes already downloaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @throws IllegalStateException
 	 *             If the client is not connected or not authenticated.
 	 * @throws FileNotFoundException
@@ -2827,7 +2856,9 @@ public class FTPClient {
 	 * @param localFile
 	 *            The local file.
 	 * @param restartAt
-	 *            The restart point (number of bytes already downloaded).
+	 *            The restart point (number of bytes already downloaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @param listener
 	 *            The listener for the operation. Could be null.
 	 * @throws IllegalStateException
@@ -2897,7 +2928,9 @@ public class FTPClient {
 	 * @param outputStream
 	 *            The destination stream of data read during the download.
 	 * @param restartAt
-	 *            The restart point (number of bytes already downloaded).
+	 *            The restart point (number of bytes already downloaded). Use
+	 *            {@link FTPClient#isResumeSupported()} to check if the server
+	 *            supports resuming of broken data transfers.
 	 * @param listener
 	 *            The listener for the operation. Could be null.
 	 * @throws IllegalStateException
@@ -2946,17 +2979,25 @@ public class FTPClient {
 			if (!r.isSuccessCode()) {
 				throw new FTPException(r);
 			}
-			// REST command (if supported and/or requested).
-			if (restSupported || restartAt > 0) {
-				communication.sendFTPCommand("REST " + restartAt);
-				r = communication.readFTPReply();
-				touchAutoNoopTimer();
-				if (r.getCode() != 350) {
-					throw new FTPException(r);
-				}
-			}
 			// Prepares the connection for the data transfer.
 			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
+			// REST command (if supported and/or requested).
+			if (restSupported || restartAt > 0) {
+				boolean done = false;
+				try {
+					communication.sendFTPCommand("REST " + restartAt);
+					r = communication.readFTPReply();
+					touchAutoNoopTimer();
+					if (r.getCode() != 350) {
+						throw new FTPException(r);
+					}
+					done = true;
+				} finally {
+					if (!done) {
+						provider.dispose();
+					}
+				}
+			}
 			// Send the RETR command.
 			communication.sendFTPCommand("RETR " + fileName);
 			Socket dtConnection;

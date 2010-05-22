@@ -1,6 +1,9 @@
 Version 1.5.1 - TBD
 
+- REST command support compatibility enhanced.
 - Blank lines coming from the server are now ignored.
+
+(Thanks to Aniceto Pérez)
 
 
 Version 1.5 - 2010/03/11
