@@ -1046,6 +1046,9 @@ public class FTPClient {
 				this.username = null;
 				this.password = null;
 				this.utf8Supported = false;
+				this.restSupported = false;
+				this.mlsdSupported = false;
+				this.modezSupported = false;
 				this.dataChannelEncrypted = false;
 				// Returns the welcome message.
 				return wm.getMessages();
@@ -1297,6 +1300,10 @@ public class FTPClient {
 			IOException, FTPIllegalReplyException, FTPException {
 		synchronized (lock) {
 			utf8Supported = false;
+			restSupported = false;
+			mlsdSupported = false;
+			modezSupported = false;
+			dataChannelEncrypted = false;
 			communication.sendFTPCommand("FEAT");
 			FTPReply r = communication.readFTPReply();
 			if (r.getCode() == 211) {
@@ -3437,20 +3444,8 @@ public class FTPClient {
 				buffer.append(", port=");
 				buffer.append(port);
 			}
-			buffer.append(", authenticated=");
-			buffer.append(authenticated);
-			if (authenticated) {
-				buffer.append(", username=");
-				buffer.append(username);
-				buffer.append(", password=");
-				StringBuffer buffer2 = new StringBuffer();
-				for (int i = 0; i < password.length(); i++) {
-					buffer2.append('*');
-				}
-				buffer.append(buffer2);
-				buffer.append(", utf8supported=");
-				buffer.append(utf8Supported);
-			}
+			buffer.append(", connector=");
+			buffer.append(connector);
 			buffer.append(", security=");
 			switch (security) {
 			case SECURITY_FTP:
@@ -3463,10 +3458,28 @@ public class FTPClient {
 				buffer.append("SECURITY_FTPES");
 				break;
 			}
-			buffer.append(", dataChannelEncrypted=");
-			buffer.append(dataChannelEncrypted);
-			buffer.append(", connector=");
-			buffer.append(connector);
+			buffer.append(", authenticated=");
+			buffer.append(authenticated);
+			if (authenticated) {
+				buffer.append(", username=");
+				buffer.append(username);
+				buffer.append(", password=");
+				StringBuffer buffer2 = new StringBuffer();
+				for (int i = 0; i < password.length(); i++) {
+					buffer2.append('*');
+				}
+				buffer.append(buffer2);
+				buffer.append(", restSupported=");
+				buffer.append(restSupported);
+				buffer.append(", utf8supported=");
+				buffer.append(utf8Supported);
+				buffer.append(", mlsdSupported=");
+				buffer.append(mlsdSupported);
+				buffer.append(", mode=modezSupported");
+				buffer.append(modezSupported);
+				buffer.append(", mode=modezEnabled");
+				buffer.append(modezEnabled);
+			}
 			buffer.append(", transfer mode=");
 			buffer.append(passive ? "passive" : "active");
 			buffer.append(", transfer type=");
@@ -3503,6 +3516,8 @@ public class FTPClient {
 					buffer.append(communicationListeners[i]);
 				}
 			}
+			buffer.append(", autoNoopTimeout=");
+			buffer.append(autoNoopTimeout);
 			buffer.append("]");
 			return buffer.toString();
 		}
