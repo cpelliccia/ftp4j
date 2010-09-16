@@ -1,3 +1,8 @@
+Version 1.5.2 - TBD
+
+- Append to a remote file support added.
+
+
 Version 1.5.1 - 2010/05/30
 
 - REST command support compatibility enhanced.

@@ -2729,6 +2729,288 @@ public class FTPClient {
 	}
 
 	/**
+	 * This method appends the contents of a local file to an existing file on
+	 * the remote server.
+	 * 
+	 * Calling this method blocks the current thread until the operation is
+	 * completed. The operation could be interrupted by another thread calling
+	 * abortCurrentDataTransfer(). The method will break with a
+	 * FTPAbortedException.
+	 * 
+	 * @param file
+	 *            The local file whose contents will be appended to the remote
+	 *            file.
+	 * @throws IllegalStateException
+	 *             If the client is not connected or not authenticated.
+	 * @throws FileNotFoundException
+	 *             If the supplied file cannot be found.
+	 * @throws IOException
+	 *             If an I/O error occurs.
+	 * @throws FTPIllegalReplyException
+	 *             If the server replies in an illegal way.
+	 * @throws FTPException
+	 *             If the operation fails.
+	 * @throws FTPDataTransferException
+	 *             If a I/O occurs in the data transfer connection. If you
+	 *             receive this exception the transfer failed, but the main
+	 *             connection with the remote FTP server is in theory still
+	 *             working.
+	 * @throws FTPAbortedException
+	 *             If operation is aborted by another thread.
+	 * @see FTPClient#abortCurrentDataTransfer(boolean)
+	 * @since 1.5.2
+	 */
+	public void append(File file) throws IllegalStateException,
+			FileNotFoundException, IOException, FTPIllegalReplyException,
+			FTPException, FTPDataTransferException, FTPAbortedException {
+		append(file, null);
+	}
+
+	/**
+	 * This method uploads a file to the remote server.
+	 * 
+	 * Calling this method blocks the current thread until the operation is
+	 * completed. The operation could be interrupted by another thread calling
+	 * abortCurrentDataTransfer(). The method will break with a
+	 * FTPAbortedException.
+	 * 
+	 * @param file
+	 *            The local file whose contents will be appended to the remote
+	 *            file.
+	 * @param listener
+	 *            The listener for the operation. Could be null.
+	 * @throws IllegalStateException
+	 *             If the client is not connected or not authenticated.
+	 * @throws FileNotFoundException
+	 *             If the supplied file cannot be found.
+	 * @throws IOException
+	 *             If an I/O error occurs.
+	 * @throws FTPIllegalReplyException
+	 *             If the server replies in an illegal way.
+	 * @throws FTPException
+	 *             If the operation fails.
+	 * @throws FTPDataTransferException
+	 *             If a I/O occurs in the data transfer connection. If you
+	 *             receive this exception the transfer failed, but the main
+	 *             connection with the remote FTP server is in theory still
+	 *             working.
+	 * @throws FTPAbortedException
+	 *             If operation is aborted by another thread.
+	 * @see FTPClient#abortCurrentDataTransfer(boolean)
+	 * @since 1.5.2
+	 */
+	public void append(File file, FTPDataTransferListener listener)
+			throws IllegalStateException, FileNotFoundException, IOException,
+			FTPIllegalReplyException, FTPException, FTPDataTransferException,
+			FTPAbortedException {
+		if (!file.exists()) {
+			throw new FileNotFoundException(file.getAbsolutePath());
+		}
+		InputStream inputStream = null;
+		try {
+			inputStream = new FileInputStream(file);
+		} catch (IOException e) {
+			throw new FTPDataTransferException(e);
+		}
+		try {
+			append(file.getName(), inputStream, 0, listener);
+		} catch (IllegalStateException e) {
+			throw e;
+		} catch (IOException e) {
+			throw e;
+		} catch (FTPIllegalReplyException e) {
+			throw e;
+		} catch (FTPException e) {
+			throw e;
+		} catch (FTPDataTransferException e) {
+			throw e;
+		} catch (FTPAbortedException e) {
+			throw e;
+		} finally {
+			if (inputStream != null) {
+				try {
+					inputStream.close();
+				} catch (Throwable t) {
+					;
+				}
+			}
+		}
+	}
+
+	/**
+	 * This method appends data to an existing file on the remote server.
+	 * 
+	 * Calling this method blocks the current thread until the operation is
+	 * completed. The operation could be interrupted by another thread calling
+	 * abortCurrentDataTransfer(). The method will break with a
+	 * FTPAbortedException.
+	 * 
+	 * @param fileName
+	 *            The name of the remote file.
+	 * @param inputStream
+	 *            The source of data.
+	 * @param streamOffset
+	 *            The offset to skip in the stream.
+	 * @param listener
+	 *            The listener for the operation. Could be null.
+	 * @throws IllegalStateException
+	 *             If the client is not connected or not authenticated.
+	 * @throws IOException
+	 *             If an I/O error occurs.
+	 * @throws FTPIllegalReplyException
+	 *             If the server replies in an illegal way.
+	 * @throws FTPException
+	 *             If the operation fails.
+	 * @throws FTPDataTransferException
+	 *             If a I/O occurs in the data transfer connection. If you
+	 *             receive this exception the transfer failed, but the main
+	 *             connection with the remote FTP server is in theory still
+	 *             working.
+	 * @throws FTPAbortedException
+	 *             If operation is aborted by another thread.
+	 * @see FTPClient#abortCurrentDataTransfer(boolean)
+	 * @since 1.5.2
+	 */
+	public void append(String fileName, InputStream inputStream,
+			long streamOffset, FTPDataTransferListener listener)
+			throws IllegalStateException, IOException,
+			FTPIllegalReplyException, FTPException, FTPDataTransferException,
+			FTPAbortedException {
+		synchronized (lock) {
+			// Is this client connected?
+			if (!connected) {
+				throw new IllegalStateException("Client not connected");
+			}
+			// Is this client authenticated?
+			if (!authenticated) {
+				throw new IllegalStateException("Client not authenticated");
+			}
+			// Select the type of contents.
+			int tp = type;
+			if (tp == TYPE_AUTO) {
+				tp = detectType(fileName);
+			}
+			if (tp == TYPE_TEXTUAL) {
+				communication.sendFTPCommand("TYPE A");
+			} else if (tp == TYPE_BINARY) {
+				communication.sendFTPCommand("TYPE I");
+			}
+			FTPReply r = communication.readFTPReply();
+			touchAutoNoopTimer();
+			if (!r.isSuccessCode()) {
+				throw new FTPException(r);
+			}
+			// Prepares the connection for the data transfer.
+			FTPDataTransferConnectionProvider provider = openDataTransferChannel();
+			// Send the STOR command.
+			communication.sendFTPCommand("APPE " + fileName);
+			Socket dtConnection;
+			try {
+				try {
+					dtConnection = provider.openDataTransferConnection();
+				} finally {
+					r = communication.readFTPReply();
+					touchAutoNoopTimer();
+					if (r.getCode() != 150 && r.getCode() != 125) {
+						throw new FTPException(r);
+					}
+				}
+			} finally {
+				provider.dispose();
+			}
+			// Change the operation status.
+			synchronized (abortLock) {
+				ongoingDataTransfer = true;
+				aborted = false;
+			}
+			// Upload the stream.
+			long done = 0;
+			try {
+				// Skips.
+				inputStream.skip(streamOffset);
+				// Opens the data transfer connection.
+				dataTransferOutputStream = dtConnection.getOutputStream();
+				// MODE Z enabled?
+				if (modezEnabled) {
+					dataTransferOutputStream = new DeflaterOutputStream(dataTransferOutputStream);
+				}
+				// Listeners.
+				if (listener != null) {
+					listener.started();
+				}
+				// Let's do it!
+				if (tp == TYPE_TEXTUAL) {
+					Reader reader = new InputStreamReader(inputStream);
+					Writer writer = new OutputStreamWriter(
+							dataTransferOutputStream, pickCharset());
+					char[] buffer = new char[1024];
+					int l;
+					while ((l = reader.read(buffer)) != -1) {
+						writer.write(buffer, 0, l);
+						writer.flush();
+						done += l;
+						if (listener != null) {
+							listener.transferred(l);
+						}
+					}
+				} else if (tp == TYPE_BINARY) {
+					byte[] buffer = new byte[1024];
+					int l;
+					while ((l = inputStream.read(buffer)) != -1) {
+						dataTransferOutputStream.write(buffer, 0, l);
+						dataTransferOutputStream.flush();
+						done += l;
+						if (listener != null) {
+							listener.transferred(l);
+						}
+					}
+				}
+			} catch (IOException e) {
+				synchronized (abortLock) {
+					if (aborted) {
+						if (listener != null) {
+							listener.aborted();
+						}
+						throw new FTPAbortedException();
+					} else {
+						if (listener != null) {
+							listener.failed();
+						}
+						throw new FTPDataTransferException(
+								"I/O error in data transfer", e);
+					}
+				}
+			} finally {
+				// Closing stream and data connection.
+				if (dataTransferOutputStream != null) {
+					try {
+						dataTransferOutputStream.close();
+					} catch (Throwable t) {
+						;
+					}
+				}
+				try {
+					dtConnection.close();
+				} catch (Throwable t) {
+					;
+				}
+				// Set to null the instance-level input stream.
+				dataTransferOutputStream = null;
+				// Consume the result reply of the transfer.
+				communication.readFTPReply();
+				// Change the operation status.
+				synchronized (abortLock) {
+					ongoingDataTransfer = false;
+					aborted = false;
+				}
+			}
+			if (listener != null) {
+				listener.completed();
+			}
+		}
+	}
+
+	/**
 	 * This method downloads a remote file from the server to a local file.
 	 * 
 	 * Calling this method blocks the current thread until the operation is
