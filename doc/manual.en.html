@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>ftp4j 1.5 manual</title>
+<title>ftp4j 1.6 manual</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 </head>
 <body>
-<h1>ftp4j 1.5 manual</h1>
+<h1>ftp4j 1.6 manual</h1>
 <ul>
   <li><a href="#1">Requirements</a></li>
   <li><a href="#2">Installation</a></li>
@@ -231,6 +231,8 @@ Admitted values are:</p>
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;));</pre>
 <p>To upload:</p>
 <pre>client.upload(new java.io.File(&quot;localFile.ext&quot;));</pre>
+<p>To upload appending contents to an existing file:</p>
+<pre>client.append(new java.io.File(&quot;localFile.ext&quot;));</pre>
 <p>These are blocking calls: they will return only when the transfer will be completed 
   (or failed, or aborted). Moreover a synchronization lock is imposed on the client, 
   since only a transfer per time is permitted in a regular FTP communication. You can 
@@ -267,6 +269,7 @@ public class MyTransferListener implements FTPDataTransferListener {
 <p>Now download or upload as follows:</p>
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
 <pre>client.upload(new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
+<pre>client.append(new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
 <p>While the client is downloading or uploading, the transfer can be aborted by 
   another thread calling the <em>abortCurrentDataTransfer()</em> method on the same <em>FTPClient</em> object. This 
   one requires a boolean parameter: <em>true</em> to perform a legal abort procedure 
@@ -278,7 +281,7 @@ public class MyTransferListener implements FTPDataTransferListener {
   a data transfer (the response is served on a data transfer channel), so the 
   <em>abortCurrentDataTransfer()</em> method can  also be used to interrupt a list 
   procedure.</p>
-<p>When a data tranfer is aborted the <em>download()</em>, <em>upload()</em>, 
+<p>When a data tranfer is aborted the <em>download()</em>, <em>upload()</em>, <em>append()</em>, 
   <em>list()</em> and <em>listNames()</em> methods die throwing a <em>FTPAbortedException</em> 
   (<em>it.sauronsoftware.ftp4j.FTPAbortedException</em>).</p>
 <p>Download and upload operation can be resumed suppling a <em>restartAt</em> 
@@ -286,9 +289,9 @@ public class MyTransferListener implements FTPDataTransferListener {
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;), 1056);</pre>
 <p>This one resumes the download operation starting from the 1056th byte of the 
   file. The first byte transferred will be the 1057th.</p>
-<p>Other <em>download()</em> and <em>upload()</em> variants let you work with 
+<p>Other <em>download()</em>, <em>upload()</em> and <em>append()</em> variants let you work with 
   streams instead of <em>java.io.File</em> objects. So you can also transfer data 
-  from and to a database, a network connection or... another <em>FTPClient</em> object!</p>
+  from and to a database, a network connection or anything else.</p>
 <p>Check the javadocs.</p>
 <a name="15"></a>
 <h2>Active and passive data transfer modes</h2>

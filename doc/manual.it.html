@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<title>Manuale di ftp4j 1.5</title>
+<title>Manuale di ftp4j 1.6</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 </head>
 <body>
-<h1>Manuale di ftp4j 1.5</h1>
+<h1>Manuale di ftp4j 1.6</h1>
 <ul>
   <li><a href="#1">Requisiti</a></li>
   <li><a href="#2">Installazione</a></li>
@@ -193,6 +193,8 @@ client.changeDirectory(&quot;relative&quot;);</pre>
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;));</pre>
 <p>L'analogo per l'upload &egrave;:</p>
 <pre>client.upload(new java.io.File(&quot;localFile.ext&quot;));</pre>
+<p>L'upload in modalit&agrave; appending &egrave; possibile facendo:</p>
+<pre>client.append(new java.io.File(&quot;localFile.ext&quot;));</pre>
 <p>Si faccia attenzione al fatto che queste sono chiamate bloccanti: il metodo ritorna solo dopo che il trasferimento &egrave; stato completato (oppure interrotto, o anche fallito). Durante il trasferimento, inoltre, un lock viene imposto sull'intero client e quindi anche usando pi&ugrave; thread non &egrave; proprio possibile fare upload e download di pi&ugrave; file simultaneamente con un solo oggetto <em>FTPClient</em>. Questo limite &egrave; stato imposto perch&eacute; il protocollo FTP ammette un solo trasferimento alla volta per sessione. Sicuramente, per&ograve;, sar&agrave; capitato di osservare dei client FTP in grado di trasferire simultaneamente due o pi&ugrave; file. Ci&ograve; viene ottenuto stabilendo pi&ugrave; sessioni con lo stesso sito remoto. Naturalmente &egrave; possibile farlo anche con ftp4j, istanziando e connettendo allo stesso sito pi&ugrave; oggetti <em>FTPClient</em>. Lato-client nessun limite in tal senso viene imposto, si faccia per&ograve; attenzione al fatto che lato-server pu&ograve; esserci una regola che limita il numero di connessioni ricevibili da parte del medesimo host.</p>
 <p>Piuttosto che attendere il completamento di un trasferimento senza fare nulla, pu&ograve; essere preferibile monitorare il progresso dell'operazione. Pu&ograve; essere fatto mediante un <em>FTPDataTransferListener</em> (<em>it.sauronsoftware.ftp4j.FTPDataTransferListener</em>). Si implementi il proprio:</p>
 <pre>import it.sauronsoftware.ftp4j.FTPDataTransferListener;
@@ -224,15 +226,16 @@ public class MyTransferListener implements FTPDataTransferListener {
 <p>Adesso si trasferisca come segue:</p>
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
 <pre>client.upload(new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
+<pre>client.append(new java.io.File(&quot;localFile.ext&quot;), new MyTransferListener());</pre>
 <p>Mentre il client sta trasferendo un file, l'operazione pu&ograve; essere interrotta da un altro thread che richiama il metodo <em>abortCurrentDataTransfer()</em> sul medesimo oggetto <em>FTPClient</em>. Il metodo richiede un parametro booleano: <em>true</em> per negoziare l'annullamento del trasferimento con il server (mediante il comando ABOR), <em>false</em> per chiudere bruscamente il canale di trasferimento senza darne previa comunicazione al server.</p>
 <pre>client.abortCurrentDataTransfer(true); // Invia ABOR</pre>
 <pre>client.abortCurrentDataTransfer(false); // Interrompre bruscamente</pre>
 <p>Si osservi che anche i metodi <em>list()</em> e <em>listNames()</em> implicameno un trasferimento (la risposta del server viene fornita su un canale di trasferimento secondario, e non lungo la linea di comunicazione principale). Per questo motivo il metodo <em>abortCurrentDataTransfer()</em> pu&ograve; interrompere anche una procedura di tipo list.</p>
-<p>Quando un trasferimento viene interrotto su comando del client, i metodi <em>download()</em>, <em>upload()</em>, <em>list()</em> e <em>listNames()</em> terminano lanciando una <em>FTPAbortedException</em> (<em>it.sauronsoftware.ftp4j.FTPAbortedException</em>).</p>
+<p>Quando un trasferimento viene interrotto su comando del client, i metodi <em>download()</em>, <em>upload(), <em>append()</em></em>, <em>list()</em> e <em>listNames()</em> terminano lanciando una <em>FTPAbortedException</em> (<em>it.sauronsoftware.ftp4j.FTPAbortedException</em>).</p>
 <p>Le operazioni di download ed upload non completate possono essere riprese fornendo un parametro <em>restartAt</em>:</p>
 <pre>client.download(&quot;remoteFile.ext&quot;, new java.io.File(&quot;localFile.ext&quot;), 1056);</pre>
 <p>Questo esempio riprende l'operazione a partire dal byte 1056 del file. Il primo byte trasferito sar&agrave; il numero 1057.</p>
-<p>Altre varianti di <em>download()</em> ed <em>upload()</em> lavorano con gli stream invece che con gli oggetti <em>java.io.File</em>. In questa maniera &egrave; possibile scambiare i dati non solo con il file system, ma anche con un database, una connessione di rete o... un altro oggetto <em>FTPClient</em>!</p>
+<p>Altre varianti di <em>download()</em>, <em>upload()</em> ed <em>append()</em> lavorano con gli stream invece che con gli oggetti <em>java.io.File</em>. In questa maniera &egrave; possibile scambiare i dati non solo con il file system, ma anche con un database, una connessione di rete o altro ancora.</p>
 <a name="15"></a>
 <h2>Trasferimenti attivi e passivi</h2>
 <p>I canali di trasferimento sono stabiliti su una separata connessione di rete tra il client ed il server. Chi contatta l'altro? La risposta dipende dal modo adottato. Il server pu&ograve; essere <em>attivo</em> o <em>passivo</em>. Quando &egrave; attivo il server si connette al client per trasferire dei dati; quando &egrave; passivo &egrave; il client a dover stabilire la connessione.</p>
