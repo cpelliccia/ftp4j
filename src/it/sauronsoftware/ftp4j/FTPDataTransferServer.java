@@ -19,6 +19,7 @@
 package it.sauronsoftware.ftp4j;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -110,7 +111,9 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 				int port = ((Integer) availables.remove(rand)).intValue();
 				// Tries with the obtained value;
 				try {
-					serverSocket = new ServerSocket(port);
+					serverSocket = new ServerSocket();
+					serverSocket.setReceiveBufferSize(512 * 1024);
+					serverSocket.bind(new InetSocketAddress(port));
 					done = true;
 				} catch (IOException e) {
 					// Port not available.
@@ -124,7 +127,9 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 		} else {
 			// Don't use a port range.
 			try {
-				serverSocket = new ServerSocket(0);
+				serverSocket = new ServerSocket();
+				serverSocket.setReceiveBufferSize(512 * 1024);
+				serverSocket.bind(new InetSocketAddress(0));
 			} catch (IOException e) {
 				throw new FTPDataTransferException(
 						"Cannot open the ServerSocket", e);
@@ -172,6 +177,7 @@ class FTPDataTransferServer implements FTPDataTransferConnectionProvider,
 			serverSocket.setSoTimeout(timeout);
 			// Wait for the incoming connection.
 			socket = serverSocket.accept();
+			socket.setSendBufferSize(512 * 1024);
 		} catch (IOException e) {
 			exception = e;
 		} finally {

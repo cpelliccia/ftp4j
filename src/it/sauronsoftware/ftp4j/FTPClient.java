@@ -144,6 +144,13 @@ public class FTPClient {
 	public static final int MLSD_NEVER = 2;
 
 	/**
+	 * The size of the buffer used when sending or receiving data.
+	 * 
+	 * @since 1.6
+	 */
+	private static final int SEND_AND_RECEIVE_BUFFER_SIZE = 64 * 1024;
+
+	/**
 	 * The DateFormat object used to parse the reply to a MDTM command.
 	 */
 	private static final DateFormat MDTM_DATE_FORMAT = new SimpleDateFormat(
@@ -2661,7 +2668,7 @@ public class FTPClient {
 					Reader reader = new InputStreamReader(inputStream);
 					Writer writer = new OutputStreamWriter(
 							dataTransferOutputStream, pickCharset());
-					char[] buffer = new char[1024];
+					char[] buffer = new char[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = reader.read(buffer)) != -1) {
 						writer.write(buffer, 0, l);
@@ -2672,7 +2679,7 @@ public class FTPClient {
 						}
 					}
 				} else if (tp == TYPE_BINARY) {
-					byte[] buffer = new byte[1024];
+					byte[] buffer = new byte[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = inputStream.read(buffer)) != -1) {
 						dataTransferOutputStream.write(buffer, 0, l);
@@ -2758,7 +2765,7 @@ public class FTPClient {
 	 * @throws FTPAbortedException
 	 *             If operation is aborted by another thread.
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
-	 * @since 1.5.2
+	 * @since 1.6
 	 */
 	public void append(File file) throws IllegalStateException,
 			FileNotFoundException, IOException, FTPIllegalReplyException,
@@ -2797,7 +2804,7 @@ public class FTPClient {
 	 * @throws FTPAbortedException
 	 *             If operation is aborted by another thread.
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
-	 * @since 1.5.2
+	 * @since 1.6
 	 */
 	public void append(File file, FTPDataTransferListener listener)
 			throws IllegalStateException, FileNotFoundException, IOException,
@@ -2869,7 +2876,7 @@ public class FTPClient {
 	 * @throws FTPAbortedException
 	 *             If operation is aborted by another thread.
 	 * @see FTPClient#abortCurrentDataTransfer(boolean)
-	 * @since 1.5.2
+	 * @since 1.6
 	 */
 	public void append(String fileName, InputStream inputStream,
 			long streamOffset, FTPDataTransferListener listener)
@@ -2943,7 +2950,7 @@ public class FTPClient {
 					Reader reader = new InputStreamReader(inputStream);
 					Writer writer = new OutputStreamWriter(
 							dataTransferOutputStream, pickCharset());
-					char[] buffer = new char[1024];
+					char[] buffer = new char[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = reader.read(buffer)) != -1) {
 						writer.write(buffer, 0, l);
@@ -2954,7 +2961,7 @@ public class FTPClient {
 						}
 					}
 				} else if (tp == TYPE_BINARY) {
-					byte[] buffer = new byte[1024];
+					byte[] buffer = new byte[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = inputStream.read(buffer)) != -1) {
 						dataTransferOutputStream.write(buffer, 0, l);
@@ -3325,7 +3332,7 @@ public class FTPClient {
 					Reader reader = new InputStreamReader(
 							dataTransferInputStream, pickCharset());
 					Writer writer = new OutputStreamWriter(outputStream);
-					char[] buffer = new char[1024];
+					char[] buffer = new char[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = reader.read(buffer, 0, buffer.length)) != -1) {
 						writer.write(buffer, 0, l);
@@ -3335,7 +3342,7 @@ public class FTPClient {
 						}
 					}
 				} else if (tp == TYPE_BINARY) {
-					byte[] buffer = new byte[1024];
+					byte[] buffer = new byte[SEND_AND_RECEIVE_BUFFER_SIZE];
 					int l;
 					while ((l = dataTransferInputStream.read(buffer, 0,
 							buffer.length)) != -1) {

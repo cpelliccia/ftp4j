@@ -1,6 +1,9 @@
-Version 1.5.2 - TBD
+Version 1.6 - TBD
 
 - Append to a remote file support added.
+- Data transfer speed enhancements.
+
+(Thanks to Jakub Stachowski)
 
 
 Version 1.5.1 - 2010/05/30

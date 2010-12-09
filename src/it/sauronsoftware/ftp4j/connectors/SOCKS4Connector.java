@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -76,7 +77,7 @@ public class SOCKS4Connector implements FTPConnector {
 		this(socks4host, socks4port, null);
 	}
 
-	private Socket connect(String host, int port) throws IOException {
+	private Socket connect(String host, int port, boolean forDataTransfer) throws IOException {
 		// Socks 4 or 4a?
 		boolean socks4a = false;
 		byte[] address;
@@ -95,7 +96,14 @@ public class SOCKS4Connector implements FTPConnector {
 		OutputStream out = null;
 		// FTPConnection routine.
 		try {
-			socket = new Socket(socks4host, socks4port);
+			if (forDataTransfer) {
+				socket = new Socket();
+				socket.setReceiveBufferSize(512 * 1024);
+				socket.setSendBufferSize(512 * 1024);
+				socket.connect(new InetSocketAddress(socks4host, socks4port));
+			} else {
+				socket = new Socket(socks4host, socks4port);
+			}
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
 			// Send the request.
@@ -182,12 +190,12 @@ public class SOCKS4Connector implements FTPConnector {
 
 	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		return connect(host, port, false);
 	}
 
 	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		return connect(host, port, true);
 	}
 
 }

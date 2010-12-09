@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -88,7 +89,7 @@ public class HTTPTunnelConnector implements FTPConnector {
 		this(proxyHost, proxyPort, null, null);
 	}
 
-	private Socket connect(String host, int port) throws IOException {
+	private Socket connect(String host, int port, boolean forDataTransfer) throws IOException {
 		// The CRLF sequence.
 		byte[] CRLF = "\r\n".getBytes("UTF-8");
 		// The connect command line.
@@ -102,7 +103,14 @@ public class HTTPTunnelConnector implements FTPConnector {
 		OutputStream out = null;
 		// FTPConnection routine.
 		try {
-			socket = new Socket(proxyHost, proxyPort);
+			if (forDataTransfer) {
+				socket = new Socket();
+				socket.setReceiveBufferSize(512 * 1024);
+				socket.setSendBufferSize(512 * 1024);
+				socket.connect(new InetSocketAddress(proxyHost, proxyPort));
+			} else {
+				socket = new Socket(proxyHost, proxyPort);
+			}
 			in = socket.getInputStream();
 			out = socket.getOutputStream();
 			// Send the CONNECT request.
@@ -184,12 +192,12 @@ public class HTTPTunnelConnector implements FTPConnector {
 
 	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		return connect(host, port, false);
 	}
 
 	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		return connect(host, port, true);
 	}
 
 }

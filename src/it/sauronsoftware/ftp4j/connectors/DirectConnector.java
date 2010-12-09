@@ -21,6 +21,7 @@ package it.sauronsoftware.ftp4j.connectors;
 import it.sauronsoftware.ftp4j.FTPConnector;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -31,18 +32,18 @@ import java.net.Socket;
  */
 public class DirectConnector implements FTPConnector {
 
-	private Socket connect(String host, int port) throws IOException {
-		return new Socket(host, port);
-	}
-
 	public Socket connectForCommunicationChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		return new Socket(host, port);
 	}
 
 	public Socket connectForDataTransferChannel(String host, int port)
 			throws IOException {
-		return connect(host, port);
+		Socket socket = new Socket();
+		socket.setReceiveBufferSize(512 * 1024);
+		socket.setSendBufferSize(512 * 1024);
+		socket.connect(new InetSocketAddress(host, port));
+		return socket;
 	}
 
 }
