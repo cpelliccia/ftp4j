@@ -2,8 +2,9 @@ Version 1.6 - TBD
 
 - Append to a remote file support added.
 - Data transfer speed enhancements.
+- FTPES is now enforced if required
 
-(Thanks to Jakub Stachowski)
+(Thanks to Jakub Stachowski and Corey Puffalt)
 
 
 Version 1.5.1 - 2010/05/30

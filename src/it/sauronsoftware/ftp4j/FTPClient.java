@@ -1207,6 +1207,9 @@ public class FTPClient {
 					r = communication.readFTPReply();
 					if (r.isSuccessCode()) {
 						communication.ssl(sslSocketFactory);
+					} else {
+						throw new FTPException(r.getCode(), "SECURITY_FTPES cannot be applied: " +
+								"the server refused both AUTH TLS and AUTH SSL commands");
 					}
 				}
 			}
