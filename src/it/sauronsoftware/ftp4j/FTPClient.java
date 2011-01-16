@@ -2620,7 +2620,7 @@ public class FTPClient {
 					communication.sendFTPCommand("REST " + restartAt);
 					r = communication.readFTPReply();
 					touchAutoNoopTimer();
-					if (r.getCode() != 350) {
+					if (r.getCode() != 350 && (r.getCode() != 502 || restartAt > 0)) {
 						throw new FTPException(r);
 					}
 					done = true;
@@ -3287,7 +3287,7 @@ public class FTPClient {
 					communication.sendFTPCommand("REST " + restartAt);
 					r = communication.readFTPReply();
 					touchAutoNoopTimer();
-					if (r.getCode() != 350) {
+					if (r.getCode() != 350 && (r.getCode() != 502 || restartAt > 0)) {
 						throw new FTPException(r);
 					}
 					done = true;

@@ -1,3 +1,14 @@
+Version TBD
+
+- The "502 Command REST not allowed by policy"
+  response to the "REST 0" command is no longer
+  considered an error. This extends the library
+  compatibility to a greater number of server
+  types. 
+
+(Thanks to Magnus Lundvall)
+
+
 Version 1.6 - 2011/01/07
 
 - Append to a remote file support added.
