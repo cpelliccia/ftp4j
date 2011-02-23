@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>it.sauronsoftware</groupId>
     <artifactId>ftp4j</artifactId>
-    <version>1.6</version>
+    <version>1.6.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>
         The ftp4j library implements a Java full-featured FTP client. With ftp4j embedded in your application you can:
