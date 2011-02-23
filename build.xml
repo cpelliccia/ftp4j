@@ -28,6 +28,10 @@
 		<jar destfile="${ftp4j.files.jar}" basedir="${ftp4j.dirs.bin}" compress="true" />
 	</target>
 
+	<target name="src-jar">
+		<jar destfile="${ftp4j.sources.jar}" basedir="${ftp4j.dirs.src}" compress="true" />
+	</target>
+
 	<target name="doc">
 		<delete dir="${ftp4j.dirs.api}" />
 		<mkdir dir="${ftp4j.dirs.api}" />
@@ -37,7 +41,7 @@
 		</javadoc>
 	</target>
 
-	<target name="rel" depends="bin,jar,doc">
+	<target name="rel" depends="src-jar,bin,jar,doc">
 		<delete dir="${ftp4j.dirs.tmp}" />
 		<mkdir dir="${ftp4j.dirs.tmp}" />
 		<property name="ftp4j.dirs.rel" value="${ftp4j.dirs.tmp}/ftp4j-${version}" />
@@ -49,6 +53,7 @@
             <fileset dir="${basedir}" includes="BUILD.txt" />
             <fileset dir="${basedir}" includes="build.properties" />
             <fileset dir="${basedir}" includes="build.xml" />
+			<fileset file="${ftp4j.sources.jar}" />
 			<fileset file="${ftp4j.files.jar}" />
 		</copy>
 		<mkdir dir="${ftp4j.dirs.rel}/src" />
