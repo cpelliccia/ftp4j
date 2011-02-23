@@ -1,6 +1,5 @@
 bin/
 doc/api/
-ftp4j-*.jar
-ftp4j-*.jar
-ftp4j-*.zip
-
+*.iml
+.idea
+target
